@@ -1,0 +1,4 @@
+interface:
+  display_name: "iPhone Simulator QA"
+  short_description: "Repeatable iPhone and Duo simulator testing"
+  default_prompt: "Use $ios-simulator-qa to test this iPhone app and turn the verified flow into an unattended regression script."
