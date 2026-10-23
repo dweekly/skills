@@ -72,7 +72,7 @@ contrary signal.
 
 Pick two or three of these and reflect them back, quoting the user:
 
-- contradictions between answers (for example "tax the rich" alongside support for a sales tax);
+- contradictions between answers (for example "tax the rich" alongside support for a sales tax, or "cut government spending" alongside support for a large bond);
 - strong claims stated as fact without evidence;
 - values that will collide on a specific ballot item;
 - positions where the strongest opposing argument hasn't been considered. Give that argument

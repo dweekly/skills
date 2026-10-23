@@ -1,11 +1,11 @@
 ---
 name: a2p-campaign
-description: Playbook for registering US A2P 10DLC SMS campaigns (Twilio/TCR) and WhatsApp senders that pass carrier review on the first try. Use when setting up texting for a new project or number (e.g. "register a campaign", "light up SMS", "10DLC", "campaign rejected", "WhatsApp sender", "WABA"), or when diagnosing a TCR rejection. Distilled from a real campaign for a civic information texting service (approved 2026-07-20 after two documented rejections).
+description: Playbook for registering US A2P 10DLC SMS campaigns (Twilio/TCR) and WhatsApp senders that pass carrier review on the first try. Use when setting up texting for a new project or number (e.g. "register a campaign", "light up SMS", "10DLC", "campaign rejected", "WhatsApp sender", "WABA"), or when diagnosing a TCR rejection. Distilled from a real campaign that was approved after two rejections.
 ---
 
 # A2P 10DLC Campaign & WhatsApp Sender Playbook
 
-Everything below was learned the hard way getting a civic information texting service's campaign approved
+Everything below was learned the hard way getting a real campaign approved
 (2 rejections → approved) and its WhatsApp senders unblocked. Follow this and a
 new campaign should pass on the first submission.
 
@@ -99,7 +99,7 @@ publicly show, at the exact URLs cited in the registration:
   After the first new sender registers, the account binds to that WABA and
   every later sender must join it (which is what you want).
 
-The registration flow, per number (verified end to end 2026-07-21):
+The registration flow, per number (verified end to end, mid-2026):
 
 1. Wizard: New Sender → pick the Twilio number → Continue → step 2 stages the
    number and shows "Continue with Facebook". Keep the Twilio window open the
@@ -115,7 +115,7 @@ The registration flow, per number (verified end to end 2026-07-21):
    the FIRST number let it create a new WABA; for every subsequent number
    select the SAME WABA (one WABA holds many numbers).
 4. **Display name is per-number** and set on a later screen — this is where
-   the brand goes (e.g. "<Brand> Info", "<Brand> Info Español" for a Spanish
+   the brand goes (e.g. "<Brand>", "<Brand> (<language>)" for a second-language
    line). Verify via SMS; the code auto-fills in Twilio.
 5. Sender shows **Online immediately** in limited mode. Full messaging limits
    and final display-name approval land after Meta **business verification**
@@ -131,7 +131,7 @@ Synthflow provisions Twilio VOICE automatically (elastic SIP trunk) when a
 number is attached in its UI, but never touches Twilio's *messaging* webhooks.
 Until you set them by hand, inbound texts get Twilio's default "Configure your
 number's SMS URL" auto-reply — even though the campaign is approved and the
-chat agent shows deployed. Verified 2026-07-21 on a production deployment:
+chat agent shows deployed. Verified on a production deployment, mid-2026:
 
 - **SMS** — configure once at the **Messaging Service** level (Console →
   Messaging → Services → *the A2P campaign's service* (its SID starts with `MG`) → Integration): set Incoming Messages =
@@ -148,7 +148,7 @@ chat agent shows deployed. Verified 2026-07-21 on a production deployment:
   - Gotcha: the sender form won't save without **"Profile about"** (the
     139-char WhatsApp profile tagline) — it's the one required field on the
     page; Update just flags it red and does nothing. Localize it per line
-    (Spanish tagline on the Spanish number).
+    (a localized tagline on each language's number).
 - Synthflow's URLs above are the Global cluster; regional clusters use
   different hosts (see their "Launch Chat Agents" doc).
 - Test every channel end-to-end after wiring — a working voice line proves

@@ -33,8 +33,8 @@ For each **candidate contest**, report:
 - **For judges:** who appointed them, any discipline, and any organized opposition.
 
 Also collect what common **voter guides** recommend for your slice: party slates, LWV (which
-often takes no position), SPUR or the local civic-research equivalent, major editorial boards,
-taxpayer groups, labor federations, chambers of commerce, ACLU, GrowSF and similar groups. Record
+often takes no position), local civic-research groups, major editorial boards,
+taxpayer groups, labor federations, chambers of commerce, civil-liberties groups, faith and family-policy groups, issue-advocacy groups on all sides, and local slate organizations of any leaning. Record
 these as data only, with links.
 
 Rules: cite a URL for every factual claim; mark anything unverified as **unverified**; flag

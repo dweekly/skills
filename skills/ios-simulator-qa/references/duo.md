@@ -1,6 +1,6 @@
 # Duo-specific testing notes
 
-Observed September 18, 2026 with Xcode 27.1 beta build 27A9269, iOS 27.1 Simulator, and Maestro 2.10.0. Revalidate on later betas; these are not permanent API guarantees.
+Observed with Xcode 27.1 beta build 27A9269, iOS 27.1 Simulator, and Maestro 2.10.0. Revalidate on later betas; these are not permanent API guarantees.
 
 ## Multiple displays and pose
 
@@ -32,8 +32,7 @@ The tested `simctl io` help exposed display power/geometry but no fold-pose oper
 ## XCUITest selectors on the Duo
 
 `app.tabBars.buttons["Name"]` finds no `TabBar` on the Duo under iOS 27.1, the
-same as iPad since iOS 18: 27 of 33 UI-test failures in one app's run
-(2026-09-18) were that single selector, with no crash. Fall back to
+same as iPad since iOS 18: most UI-test failures in one run were that single selector, with no crash. Fall back to
 `app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch`
 on any device where the tab bar query finds nothing (code in SKILL.md).
 
@@ -79,4 +78,4 @@ Recheck current versions and issue status before proposing a workaround. Preserv
 - [Designing for iPhone Duo](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo)
 - Installed SDK headers and `xcrun simctl io help` for the selected Xcode.
 
-The initial design review used the user's full Apple documentation PDFs because the web reader exposed only a JavaScript shell. If that happens again, try Apple's linked Markdown or an accessible official/local copy; do not claim to have read content unavailable to the tool.
+If Apple's web reader exposes only a JavaScript shell, try Apple's linked Markdown or an accessible official/local copy; do not claim to have read content unavailable to the tool.

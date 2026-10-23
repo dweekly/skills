@@ -24,7 +24,7 @@ weighs things, so use them.
    second look in one direction or the other. Never let guide weight override the user's
    beliefs; it only flags items for a second look.
 6. **Inference labels.** If the mapping depends on your inference rather than the user's words
-   (for example, "a demand subsidy raises prices" is economics, not their statement), label it.
+   (for example, a claim about a subsidy's effect on prices comes from economic analysis, not from their statement), label it.
 
 ## Headline section (first thing the user reads)
 

@@ -7,9 +7,9 @@ description: Build, run, drive and visually verify iPhone apps on the Simulator,
 # iPhone simulator QA
 
 Two kinds of content. The **run mechanics** (first six sections) were each
-earned on a real run on 2026-09-18 (a production iPhone/iPad app, Xcode 27.0 and the 27.1 beta,
+earned on real runs in September 2026 (Xcode 27.0 and the 27.1 beta,
 macOS 27) and are checks or commands, not advice. The **method** sections
-after them come from a Duo QA pass on another app the same day and are the
+after them come from a Duo QA pass on another app and are the
 working practice for driving and verifying a flow. For Duo displays and
 poses read [references/duo.md](references/duo.md); for turning a
 walkthrough into a durable flow read
@@ -24,8 +24,8 @@ scope.
 
 A test target with an iOS deployment target newer than the simulator's runtime
 fails at **build** time with "doesn't match ... deployment target", before a
-single test runs. Device names do not identify a runtime: this machine has three
-devices called "iPhone 17 Pro" under three runtimes. Select from the JSON and
+single test runs. Device names do not identify a runtime: a machine can easily have several
+devices called "iPhone 17 Pro" under different runtimes. Select from the JSON and
 pass the UDID.
 
 ```sh
@@ -79,7 +79,7 @@ precaution taken, not a measurement made.)
 ## iPad and iPhone Duo have no `TabBar` under XCUITest
 
 `app.tabBars.buttons["Name"]` finds nothing on iPad since iOS 18 (the floating
-tab bar) and on iPhone Duo under iOS 27.1: 27 of 33 UI failures on the Duo
+tab bar) and on iPhone Duo under iOS 27.1: most UI failures in one Duo run
 were this one selector. Any tab helper should try the tab bar and fall back to
 a label predicate on every device:
 
