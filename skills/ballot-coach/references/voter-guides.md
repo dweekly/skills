@@ -15,6 +15,7 @@ eyes open.
 - **League of Women Voters** (state and local chapters): good-government and voting-access
   leaning; often takes no position on candidates.
 - **SPUR** (Bay Area): urbanist, pro-housing, policy-research leaning.
+- **Pete Rates the Propositions** (peterates.com, California, since 1980): one person's yes/no on every statewide proposition, with short summaries and a detailed version. Statewide propositions only, no local measures. No stated leaning; judge it by its track record against your own views.
 - **GrowSF** (San Francisco): moderate, pro-housing, pro-public-safety.
 - **Common Cause / ACLU:** voting-rights and civil-liberties leaning.
 - **Howard Jarvis Taxpayers Association / CalTax / local taxpayer associations:** generally
