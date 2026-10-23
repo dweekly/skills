@@ -1,6 +1,6 @@
 ---
 name: ios-simulator-qa
-description: Builds, runs, drives and visually verifies iPhone apps on the Simulator, including iPhone Duo, and turn a verified walkthrough into an unattended XCTest or Maestro flow. Covers picking a device by runtime and UDID, a beta Xcode without xcode-select, simulators as shared state, the missing tab bar on iPad and iPhone Duo under XCUITest, reading a test log for crashes versus failures, multi-display capture and poses on the Duo, system UI that sits outside the app's tree, and honest scoping of evidence. Use for any simulator test run, QA pass or test-automation task; not for ordinary iOS implementation with no testing in scope.
+description: Builds, runs, drives and visually verifies iPhone apps on the Simulator, including iPhone Duo, and turns a verified walkthrough into an unattended XCTest or Maestro flow. Covers picking a device by runtime and UDID, a beta Xcode without xcode-select, simulators as shared state, the missing tab bar on iPad and iPhone Duo under XCUITest, reading a test log for crashes versus failures, multi-display capture and poses on the Duo, system UI that sits outside the app's tree, and honest scoping of evidence. Use for any simulator test run, QA pass or test-automation task; not for ordinary iOS implementation with no testing in scope.
 license: MIT
 ---
 
