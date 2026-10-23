@@ -1,6 +1,7 @@
 ---
 name: ballot-coach
-description: Help a voter decide their own ballot from their own beliefs rather than a party slate. Collects ballot photos and starts background research on every contest first, then runs a timed beliefs interview (including how much they trust common voter guides) while the research runs, challenges the stated beliefs, maps the research onto them with the tipping point for each close call, and afterward records the actual votes and reasons into a reusable beliefs file. Use when someone asks for help with how to vote, understanding their ballot, a voter guide tailored to them, or updating their beliefs file after an election. Nonpartisan by design; not for writing campaign material or persuading others.
+description: Helps a voter decide their own ballot from their own beliefs rather than a party slate. Collects ballot photos and starts background research on every contest first, then runs a timed beliefs interview (including how much they trust common voter guides) while the research runs, challenges the stated beliefs, maps the research onto them with the tipping point for each close call, and afterward records the actual votes and reasons into a reusable beliefs file. Use when someone asks for help with how to vote, understanding their ballot, a voter guide tailored to them, or updating their beliefs file after an election. Nonpartisan by design; not for writing campaign material or persuading others.
+license: MIT
 ---
 
 # Ballot coach

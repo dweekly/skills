@@ -4,10 +4,15 @@ Skills for Claude Code and other agents that support the [Agent Skills](https://
 
 ## Install (Claude Code)
 
+One step (Claude Code 2.1.275 or later):
+
 ```
-/plugin marketplace add dweekly/skills
-/plugin install ballot-coach@dweekly-skills
+/plugin install ballot-coach --marketplace dweekly/skills
+/plugin install a2p-campaign --marketplace dweekly/skills
+/plugin install ios-simulator-qa --marketplace dweekly/skills
 ```
+
+Or add the marketplace once, then install by name: `/plugin marketplace add dweekly/skills`, then `/plugin install ballot-coach@dweekly-skills`.
 
 Or copy any `skills/<name>/` directory into `~/.claude/skills/`.
 

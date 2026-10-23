@@ -1,6 +1,7 @@
 ---
 name: a2p-campaign
-description: Playbook for registering US A2P 10DLC SMS campaigns (Twilio/TCR) and WhatsApp senders that pass carrier review on the first try. Use when setting up texting for a new project or number (e.g. "register a campaign", "light up SMS", "10DLC", "campaign rejected", "WhatsApp sender", "WABA"), or when diagnosing a TCR rejection. Distilled from a real campaign that was approved after two rejections.
+description: Gives a playbook for registering US A2P 10DLC SMS campaigns (Twilio/TCR) and WhatsApp senders that pass carrier review on the first try. Use when setting up texting for a new project or number (e.g. "register a campaign", "light up SMS", "10DLC", "campaign rejected", "WhatsApp sender", "WABA"), or when diagnosing a TCR rejection. Distilled from a real campaign that was approved after two rejections.
+license: MIT
 ---
 
 # A2P 10DLC Campaign & WhatsApp Sender Playbook
