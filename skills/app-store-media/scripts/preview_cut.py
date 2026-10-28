@@ -227,8 +227,8 @@ def check_overlays(overlays: dict, cfg: dict, band: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("config", type=Path, help="preview.json")
-    ap.add_argument("--raw", nargs="+", help="simctl recording per take: name=path (or a bare path for one take)")
-    ap.add_argument("--marks", nargs="+", help="marks file per take: name=path (or a bare path for one take)")
+    ap.add_argument("--raw", nargs="+", action="extend", help="simctl recording per take: name=path (or a bare path for one take)")
+    ap.add_argument("--marks", nargs="+", action="extend", help="marks file per take: name=path (or a bare path for one take)")
     ap.add_argument("--out", required=True, type=Path, help="work directory: pieces, cut.json, candidate.mp4")
     ap.add_argument("--overlays", type=Path, help="preview_overlays.swift output (default <out>/overlays)")
     args = ap.parse_args(argv)
