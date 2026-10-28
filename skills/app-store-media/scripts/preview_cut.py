@@ -383,11 +383,17 @@ def cut(args: argparse.Namespace) -> int:
             prev = cfg["beats"][i - 1] if i > 0 else {}
             fade_in = 0.0 if (join_kinds[i] == "cut" and prev.get("card") is True
                               and prev.get("caption") == spec.get("caption")) else fade
+            # A beat can override either fade, for a film that loops: the first beat
+            # shows its caption from frame 0 and the last keeps it to the final frame,
+            # so the caption does not blink at the wrap (and frame 0, the default
+            # poster, carries it).
+            fade_in = float(spec.get("captionFadeIn", fade_in))
+            fade_out = float(spec.get("captionFadeOut", fade))
             # Readable time excludes the caption's own fades and any dissolve it sits under.
             lead = max(fade_in, lead_ov / fps)
-            tail = max(fade, tail_ov / fps)
+            tail = max(fade_out, tail_ov / fps)
             b.update(caption=spec.get("caption"), disclosure=spec.get("disclosure"),
-                     caption_fade_in_seconds=fade_in, caption_fade_out_seconds=fade,
+                     caption_fade_in_seconds=fade_in, caption_fade_out_seconds=fade_out,
                      caption_readable_seconds=round(frames / fps - lead - tail, 3))
         elif kind == "card":
             # A card's text does not fade; only a dissolve into or out of it takes time away.

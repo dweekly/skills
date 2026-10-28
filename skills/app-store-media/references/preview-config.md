@@ -66,6 +66,7 @@ Recordings and stills name their `take`; a card has none.
 | `band` | `"caption"` or `"logo"`. Default: caption when `caption` is set, else logo. |
 | `caption` | One line, at most about five words. Shrinks to fit the width, with a warning below 75%. |
 | `disclosure` | Optional second line under a caption, for a feature that needs an account or a purchase. |
+| `captionFadeIn`, `captionFadeOut` | Seconds; override the config's `captionFade` for this beat. For a looping film, give the first beat `captionFadeIn: 0` and the last `captionFadeOut: 0` with the same caption, so the caption never blinks at the wrap and frame 0 (the default poster) carries it. |
 | `tagline` | Logo band only: overrides the config's `tagline` (an end card usually says something different from the opening). |
 | `card` | `true` makes the beat a brand card: the full frame (no band, no footage) is the brand gradient with `caption` large and centred, wrapping to at most 3 lines, and an optional smaller `subline` (at most 2 lines). The scripts fail if either needs more lines. |
 | `subline` | Card only: the smaller line under the card's caption. |
