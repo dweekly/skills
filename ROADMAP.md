@@ -10,3 +10,4 @@
 - Plugin versions are omitted on purpose, so installs track commits; add semver once a skill has outside users who need stability.
 - ballot-coach has not yet been run end to end with a real user.
 - voter-guides.md is California-heavy; research agents find local equivalents elsewhere, but the offered list should broaden after a non-California run.
+- app-store-media: the framer's iPhone Duo corner radius and font scale are starting values, not yet checked against real Duo captures. The uploader is described, not bundled: a generic `upload_store_media.py` (config-driven, display types looked up rather than hard-coded) would remove the copy-and-edit step. The contact-sheet builder is still per-app.

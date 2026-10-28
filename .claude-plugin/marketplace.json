@@ -26,6 +26,13 @@
       "source": "./",
       "strict": false,
       "skills": ["./skills/ios-simulator-qa"]
+    },
+    {
+      "name": "app-store-media",
+      "description": "Produce App Store screenshots from simulator captures at every accepted size, framed with brand captions, validated, and ready to upload",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/app-store-media"]
     }
   ]
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "App Store Media"
+  short_description: "App Store screenshots at every size, framed and validated"
+  default_prompt: "Use $app-store-media to produce this app's App Store screenshots at every required size, with captions, a contact sheet for approval, and validation before upload."
