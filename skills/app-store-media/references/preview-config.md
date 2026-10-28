@@ -87,7 +87,11 @@ and any dissolve there. A card's is its length minus any dissolve overlaps
 (the card's readable time plus the beat's): a 1.2 s card cut into a beat that
 repeats its caption passes. A card whose caption the next beat does not repeat
 must meet the floor alone, so the same 1.2 s card before a different caption
-fails. The cutter refuses a config that misses the floor, and
+fails. When a card hard-cuts into a beat with its caption, that beat's band
+caption has no fade-in: it is at full strength from the first frame, so the
+words never vanish between card and band (it still fades out at the end), and
+the checker compares the band of that first frame with the overlay at full
+alpha. The cutter refuses a config that misses the floor, and
 `check_preview.py` recomputes the runs from the manifest.
 
 `"first"` of a full walkthrough is usually the home screen before the app

@@ -18,7 +18,9 @@ Prints one line per check, `ok` or `FAIL`, tagged [Apple], [house] or
 [manifest] With --manifest (preview_cut.py's cut.json): every piece decodes
           to its beat's frame count within 2 frames and plays at rate 1, every
           caption is readable for at least 2.5 s (a card followed by a beat
-          with the same caption counts as one run), one transition per pair of
+          with the same caption counts as one run, and after a hard cut from
+          such a card the band caption is at full strength on the beat's first
+          frame), one transition per pair of
           beats, each a 0-frame cut or a dissolve, beats minus dissolve
           overlaps equal the total, and the candidate's frame count matches.
 
@@ -251,6 +253,38 @@ def check_readability(rep: Report, beats: list[dict], floor: float) -> None:
             rep.add("manifest", f"beat {b['name']} caption readable >= {floor}s", own >= floor, f"{own}s")
 
 
+def band_rgb(args: list[str], vf: str) -> bytes:
+    r = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", *args, "-filter_complex", vf, "-frames:v", "1",
+                        "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
+    if r.returncode != 0 or not r.stdout:
+        raise Fail(f"could not extract a band image: {r.stderr.decode(errors='replace').strip()[-300:]}")
+    return r.stdout
+
+
+def mean_abs_diff(a: bytes, b: bytes) -> float:
+    if len(a) != len(b):
+        raise Fail(f"band images differ in size ({len(a)} vs {len(b)} bytes)")
+    return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
+
+
+def band_strength(candidate: Path, frame: int, background: Path, band_png: Path, width: int, band: int) -> tuple[float, float]:
+    """Mean absolute RGB difference (0 to 255) between the band region of the
+    candidate's frame and (full) the overlay composited at full alpha over the
+    background, and (empty) the background's band with no text. A caption at
+    full strength sits near `full` and far from `empty`; one fading in from
+    zero is the reverse."""
+    crop = f"crop={width}:{band}:0:0"
+    got = band_rgb(["-i", str(candidate)], f"[0:v]select=eq(n\\,{frame}),{crop}")
+    full = band_rgb(["-i", str(background), "-i", str(band_png)], f"[0:v][1:v]overlay=0:0,{crop}")
+    empty = band_rgb(["-i", str(background)], f"[0:v]{crop}")
+    return mean_abs_diff(got, full), mean_abs_diff(got, empty)
+
+
+def handoff_ok(full: float, empty: float) -> bool:
+    """Close to the full-alpha overlay (compression noise only) and clearly away from an empty band."""
+    return full <= 4 and empty >= 3 * max(full, 1.0)
+
+
 def check_manifest(rep: Report, path: Path, m: dict, work: Path) -> None:
     fps = int(m["fps"])
     beats = m["beats"]
@@ -266,6 +300,15 @@ def check_manifest(rep: Report, path: Path, m: dict, work: Path) -> None:
             return abs(n - want) <= FRAME_TOLERANCE, f"{n} frames, wanted {want} (+/-{FRAME_TOLERANCE})"
         rep.check("manifest", f"beat {b['name']} length", piece)
     check_readability(rep, beats, float(m.get("caption_min_readable_seconds", 2.5)))
+    for b in beats:
+        if b.get("band") == "caption" and b.get("transition_in") == "cut" and b.get("caption_fade_in_seconds") == 0:
+            def handoff(b=b):
+                overlays = Path(m["overlays"])
+                full, empty = band_strength(path, round(float(b["timeline_in"]) * fps), overlays / m["background"],
+                                            overlays / b["band_file"], int(m["width"]), int(m["band_height"]))
+                return handoff_ok(full, empty), \
+                    f"band differs from the full-alpha overlay by {full:.2f}, from an empty band by {empty:.2f} (of 255)"
+            rep.check("manifest", f"beat {b['name']} caption at full strength on its first frame", handoff)
     trans = m["transitions"]
     rep.add("manifest", "one transition per pair of beats", len(trans) == len(beats) - 1,
             f"{len(trans)} for {len(beats)} beats")
@@ -441,6 +484,27 @@ def self_test() -> list[str]:
         mp.write_text(json.dumps(m6))
         expect("a 1.2 s card cut into a beat with a different caption", check_candidate(good, mp),
                "card intro caption readable")
+
+        # Card-to-band handoff: frame 0 shows the band empty (a caption fading in
+        # from zero), frame 1 the caption at full alpha. Encoded the way the cutter does.
+        bg, bandpng, hand = d / "bg.png", d / "band.png", d / "handoff.mp4"
+        ff("-f", "lavfi", "-i", "color=c=0x1F3A5F:s=886x1920", "-frames:v", "1", str(bg))
+        ff("-f", "lavfi", "-i", "color=c=white@0:s=886x1920,format=rgba", "-frames:v", "1",
+           "-vf", "geq=r=255:g=255:b=255:a='if(between(Y\\,90\\,170)*between(X\\,120\\,766)\\,255\\,0)'",
+           str(bandpng))
+        ff("-loop", "1", "-framerate", "30", "-i", str(bg), "-loop", "1", "-framerate", "30", "-i", str(bandpng),
+           "-filter_complex", "[1:v]format=rgba,fade=t=in:st=0.01:d=0.01:alpha=1[c];[0:v][c]overlay=0:0:format=gbrp,"
+           "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p", "-frames:v", "2",
+           "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709",
+           "-color_trc", "bt709", "-color_range", "tv", str(hand))
+        f0 = band_strength(hand, 0, bg, bandpng, 886, 268)
+        f1 = band_strength(hand, 1, bg, bandpng, 886, 268)
+        if handoff_ok(*f0):
+            raise Fail(f"handoff check passed a band with the caption at zero alpha: {f0}")
+        if not handoff_ok(*f1):
+            raise Fail(f"handoff check failed a band with the caption at full alpha: {f1}")
+        notes.append(f"ok  card-to-band handoff: caption at zero alpha fails (full {f0[0]:.2f}, empty {f0[1]:.2f}); "
+                     f"at full alpha passes (full {f1[0]:.2f}, empty {f1[1]:.2f})")
 
         # Regression: a sparse VFR take (frames only in the first second of every
         # 4 s, as simctl writes a screen that stops changing), and a beat that

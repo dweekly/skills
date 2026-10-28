@@ -378,17 +378,25 @@ def cut(args: argparse.Namespace) -> int:
                 raise CutError(f"beat {name}: still frame {at} is past the end of take {take}")
             b.update(kind="still", still=still, still_frame=at)
         if kind == "caption":
+            # A card that hard-cuts into a beat with the identical caption hands the
+            # words straight to the band: no fade-in, so they never vanish between.
+            prev = cfg["beats"][i - 1] if i > 0 else {}
+            fade_in = 0.0 if (join_kinds[i] == "cut" and prev.get("card") is True
+                              and prev.get("caption") == spec.get("caption")) else fade
             # Readable time excludes the caption's own fades and any dissolve it sits under.
-            lead = max(fade, lead_ov / fps)
+            lead = max(fade_in, lead_ov / fps)
             tail = max(fade, tail_ov / fps)
-            b.update(caption=spec.get("caption"), disclosure=spec.get("disclosure"), caption_fade_seconds=fade,
+            b.update(caption=spec.get("caption"), disclosure=spec.get("disclosure"),
+                     caption_fade_in_seconds=fade_in, caption_fade_out_seconds=fade,
                      caption_readable_seconds=round(frames / fps - lead - tail, 3))
         elif kind == "card":
             # A card's text does not fade; only a dissolve into or out of it takes time away.
-            b.update(caption=spec.get("caption"), subline=spec.get("subline"), caption_fade_seconds=0.0,
+            b.update(caption=spec.get("caption"), subline=spec.get("subline"),
+                     caption_fade_in_seconds=0.0, caption_fade_out_seconds=0.0,
                      caption_readable_seconds=round((frames - lead_ov - tail_ov) / fps, 3))
         else:
-            b.update(tagline=spec.get("tagline") or cfg.get("tagline"), caption_fade_seconds=0.0)
+            b.update(tagline=spec.get("tagline") or cfg.get("tagline"),
+                     caption_fade_in_seconds=0.0, caption_fade_out_seconds=0.0)
         beats.append(b)
 
     # Readability. A card followed directly by a caption beat with the identical
@@ -454,8 +462,10 @@ def cut(args: argparse.Namespace) -> int:
             footage_in = [*loop, "-i", str(still)]
             footage = f"[1:v]{scale}[f]"
         if b["band"] == "caption":
-            d, f = n / fps, b["caption_fade_seconds"]
-            band_f = f"[2:v]format=rgba,fade=t=in:st=0:d={f}:alpha=1,fade=t=out:st={d - f:.4f}:d={f}:alpha=1[c]"
+            d, fi, fo = n / fps, b["caption_fade_in_seconds"], b["caption_fade_out_seconds"]
+            fades = ([f"fade=t=in:st=0:d={fi}:alpha=1"] if fi > 0 else []) + \
+                    ([f"fade=t=out:st={d - fo:.4f}:d={fo}:alpha=1"] if fo > 0 else [])
+            band_f = "[2:v]" + ",".join(["format=rgba", *fades]) + "[c]"
         else:
             band_f = "[2:v]format=rgba[c]"
         graph = (f"{footage};[0:v]format=gbrp[bg];[bg][f]overlay={g['x']}:{g['y']}:format=gbrp:shortest=1[b];"
@@ -511,7 +521,7 @@ def cut(args: argparse.Namespace) -> int:
         "band_height": band, "band_ratio": float(cfg["bandRatio"]),
         "dissolve_frames": dissolve_frames, "dissolve_seconds": round(dissolve_frames / fps, 3),
         "caption_fade_seconds": fade, "caption_min_readable_seconds": min_readable,
-        "playback_rate": PLAYBACK_RATE, "overlays": str(overlays_dir),
+        "playback_rate": PLAYBACK_RATE, "overlays": str(overlays_dir), "background": overlays["background"],
         "takes": takes, "beats": beats, "transitions": transitions,
         "total_frames": total_frames, "total_expected_seconds": round(total_frames / fps, 3),
         "audio": {"kind": "generated silence (anullsrc)", "sample_rate": AUDIO_RATE, "channels": 2,

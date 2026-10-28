@@ -154,7 +154,10 @@ and exits non-zero if any fails:
    that time, never the keyframe a seek lands on).
 3. **[manifest]** every piece decodes to its beat's frame count within two
    frames and plays at rate 1; every caption readable for at least 2.5 s, a
-   card and a following beat with the same caption counted as one run; one
+   card and a following beat with the same caption counted as one run, and
+   after a hard cut from such a card the band caption at full strength on the
+   beat's first frame (its band region compared with the overlay composited at
+   full alpha, and with an empty band as the control); one
    transition per pair of beats, each a 0-frame cut or a dissolve; beats minus
    dissolve overlaps equals the total; the candidate's frame count matches.
 
