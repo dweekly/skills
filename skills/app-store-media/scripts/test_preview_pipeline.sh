@@ -10,7 +10,8 @@
 # the first 1.5 s of every 4 s, the way simctl writes a screen that stops
 # changing; three beats start inside a hold), marks files, and a logo; then
 # runs preview_overlays.swift -> preview_cut.py -> check_preview.py and extracts
-# a few frames to <work-dir>/frames/ for a visual look. Also proves the cutter
+# a frame per beat kind and either side of each hard cut (the example has a
+# brand card joined by cuts) to <work-dir>/frames/ for a visual look. Also proves the cutter
 # refuses overlays rendered from a stale config and marks out of order.
 # Exits non-zero on any failure. Needs ffmpeg, ffprobe, swift and python3.
 set -euo pipefail
@@ -66,8 +67,25 @@ python3 "$SCRIPTS/preview_cut.py" "$WORK/preview.json" --out "$WORK/cut" \
 say "5/5  check"
 python3 "$SCRIPTS/check_preview.py" "$WORK/cut/candidate.mp4" --manifest "$WORK/cut/cut.json"
 
+# A frame from each kind of beat, and the two frames either side of each hard cut
+# into and out of the card, picked by frame number from the manifest.
 mkdir -p "$WORK/frames"
-for t in 0.5 5.0 10.0 15.0 23.5; do
-    ffmpeg -nostdin -v error -y -ss "$t" -i "$WORK/cut/candidate.mp4" -frames:v 1 "$WORK/frames/t$t.png"
-done
-say "Frames for a visual look: $WORK/frames/ (opening, home, compose, share with disclosure, end)"
+python3 - "$WORK/cut/cut.json" > "$WORK/frames/picks.txt" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1])); fps = m["fps"]
+by = {b["name"]: b for b in m["beats"]}
+def mid(n): b = by[n]; return round((b["timeline_in"] + b["timeline_out"]) / 2 * fps)
+picks = {"opening": mid("opening"), "home": mid("home"), "card": mid("compose-card"),
+         "share": mid("share"), "end": mid("end")}
+for t in m["transitions"]:
+    if t["kind"] == "cut":
+        f = round(by[t["before"]]["timeline_in"] * fps)
+        picks[f"cut-{t['before']}-before"], picks[f"cut-{t['before']}-after"] = f - 1, f
+for k, v in picks.items():
+    print(k, v)
+PY
+while read -r label frame; do
+    ffmpeg -nostdin -v error -y -i "$WORK/cut/candidate.mp4" -vf "select=eq(n\,$frame)" -frames:v 1 \
+        "$WORK/frames/$label.png"
+done < "$WORK/frames/picks.txt"
+say "Frames for a visual look: $WORK/frames/ ($(cut -d' ' -f1 "$WORK/frames/picks.txt" | tr '\n' ' '))"

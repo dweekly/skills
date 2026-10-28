@@ -34,8 +34,10 @@ frame round(t * fps).
 Every frame has one shape: a band across the top (the logo, app name and
 tagline, or a one-line caption) and the take's footage scaled uniformly to fit
 below it, aspect preserved, centred. Nothing jumps at a transition and no app
-text is covered. Consecutive beats are joined by a dissolve; captions fade in
-and out with their beat; logo bands do not fade.
+text is covered. A card beat is the exception: a full-frame brand card with a
+large caption and no footage. Each beat is joined to the one before it by a
+dissolve or a hard cut (`transitionIn`); captions fade in and out with their
+beat; logo bands and cards do not fade.
 
 The film carries no captured audio, ever: the track is generated digital
 silence (anullsrc), added once after assembly.
@@ -183,6 +185,8 @@ def load_config(path: Path) -> dict:
 
 def band_kind(beat: dict) -> str:
     """Same default as preview_overlays.swift; overlays.json is compared against it."""
+    if beat.get("card") is True:
+        return "card"
     return beat.get("band") or ("caption" if beat.get("caption") else "logo")
 
 
@@ -216,6 +220,8 @@ def check_overlays(overlays: dict, cfg: dict, band: int) -> None:
         want = {"band": kind}
         if kind == "caption":
             want.update(caption=b.get("caption"), disclosure=b.get("disclosure"))
+        elif kind == "card":
+            want.update(caption=b.get("caption"), subline=b.get("subline"))
         else:
             want.update(tagline=b.get("tagline") or cfg.get("tagline"), appName=cfg.get("appName"))
         for k, v in want.items():
@@ -259,7 +265,7 @@ def cut(args: argparse.Namespace) -> int:
 
     raws = take_paths(args.raw, cfg, "raw", base, "--raw")
     mark_files = take_paths(args.marks, cfg, "marks", base, "--marks")
-    used = {b.get("take") for b in cfg["beats"]}
+    used = {b.get("take") for b in cfg["beats"] if b.get("card") is not True}
     for name in used:
         if name not in cfg["takes"]:
             raise CutError(f"a beat names take {name!r}, which is not in \"takes\"")
@@ -299,30 +305,48 @@ def cut(args: argparse.Namespace) -> int:
         say(f"  {frames} frames ({frames / fps:.3f}s); footage {geom['width']}x{geom['height']} at "
             f"{geom['x']},{geom['y']}")
 
-    # --- 2. Resolve every beat to frames.
-    beats = []
+    # --- 2. Joins, then every beat resolved to frames.
+    # joins[i] is the overlap in frames of the join into beat i (none into beat 0):
+    # a dissolve overlaps the two beats by `dissolve`, a cut by nothing.
     n_beats = len(cfg["beats"])
+    joins, join_kinds = [0] * n_beats, [""] * n_beats
+    for i, spec in enumerate(cfg["beats"][1:], 1):
+        kind = spec.get("transitionIn") or ("dissolve" if dissolve_frames else "cut")
+        if kind not in ("cut", "dissolve"):
+            raise CutError(f"beat {spec.get('name')}: transitionIn must be \"cut\" or \"dissolve\", not {kind!r}")
+        if kind == "dissolve" and not dissolve_frames:
+            raise CutError(f"beat {spec.get('name')}: transitionIn is dissolve but the config's dissolve is 0")
+        join_kinds[i], joins[i] = kind, (dissolve_frames if kind == "dissolve" else 0)
+
+    beats = []
     for i, spec in enumerate(cfg["beats"]):
         name = spec.get("name")
-        take = spec.get("take")
-        if not name or not take:
-            raise CutError(f"beat {i}: needs \"name\" and \"take\"")
-        t = takes[take]
+        is_card = spec.get("card") is True
+        take = None if is_card else spec.get("take")
+        if not name or not (is_card or take):
+            raise CutError(f"beat {i}: needs \"name\" and \"take\" (or \"card\": true)")
         seconds = float(spec.get("seconds", 0))
         frames = round(seconds * fps)
         if frames < 1:
             raise CutError(f"beat {name}: \"seconds\" must be positive")
-        if frames <= dissolve_frames * (int(i > 0) + int(i < n_beats - 1)):
+        lead_ov, tail_ov = joins[i], (joins[i + 1] if i < n_beats - 1 else 0)
+        if frames <= lead_ov + tail_ov:
             raise CutError(f"beat {name}: {seconds}s is too short for its dissolves")
         kind = band_kind(spec)
         o = overlays["beats"][i]
         b = {"order": i, "name": name, "take": take, "band": kind, "seconds": seconds, "frames": frames,
-             "rate": PLAYBACK_RATE, "piece": f"piece_{i + 1:02d}_{name}.mp4", "band_file": o["file"]}
+             "rate": PLAYBACK_RATE, "piece": f"piece_{i + 1:02d}_{name}.mp4", "band_file": o["file"],
+             "transition_in": join_kinds[i] or None}
         has_still = "still" in spec
         has_marks = "start_mark" in spec or "end_mark" in spec
-        if has_still == has_marks:
+        if is_card:
+            if has_still or has_marks or not spec.get("caption"):
+                raise CutError(f"beat {name}: a card has a caption and no take, still or marks")
+            b.update(kind="card")
+        elif has_still == has_marks:
             raise CutError(f"beat {name}: give either \"still\" or \"start_mark\" and \"end_mark\"")
-        if has_marks:
+        elif has_marks:
+            t = takes[take]
             sm, em = spec.get("start_mark"), spec.get("end_mark")
             for m in (sm, em):
                 if m not in t["_marks"]:
@@ -340,6 +364,7 @@ def cut(args: argparse.Namespace) -> int:
             b.update(kind="recording", start_mark=sm, end_mark=em, source_start_seconds=round(start, 3),
                      source_available_seconds=round(available, 3), start_frame=start_frame)
         else:
+            t = takes[take]
             still = spec["still"]
             if still == "first":
                 at = 0
@@ -354,28 +379,48 @@ def cut(args: argparse.Namespace) -> int:
             b.update(kind="still", still=still, still_frame=at)
         if kind == "caption":
             # Readable time excludes the caption's own fades and any dissolve it sits under.
-            lead = max(fade, dissolve_frames / fps if i > 0 else 0.0)
-            tail = max(fade, dissolve_frames / fps if i < n_beats - 1 else 0.0)
-            readable = round(frames / fps - lead - tail, 3)
-            if readable < min_readable:
-                raise CutError(f"beat {name}: caption readable for {readable}s, under the {min_readable}s floor; "
-                               "lengthen the beat")
-            b.update(caption=spec.get("caption"), disclosure=spec.get("disclosure"),
-                     caption_fade_seconds=fade, caption_readable_seconds=readable)
+            lead = max(fade, lead_ov / fps)
+            tail = max(fade, tail_ov / fps)
+            b.update(caption=spec.get("caption"), disclosure=spec.get("disclosure"), caption_fade_seconds=fade,
+                     caption_readable_seconds=round(frames / fps - lead - tail, 3))
+        elif kind == "card":
+            # A card's text does not fade; only a dissolve into or out of it takes time away.
+            b.update(caption=spec.get("caption"), subline=spec.get("subline"), caption_fade_seconds=0.0,
+                     caption_readable_seconds=round((frames - lead_ov - tail_ov) / fps, 3))
         else:
             b.update(tagline=spec.get("tagline") or cfg.get("tagline"), caption_fade_seconds=0.0)
         beats.append(b)
 
-    # Final timeline: each dissolve overlaps the previous beat's tail.
+    # Readability. A card followed directly by a caption beat with the identical
+    # caption is one caption run: the floor applies to the run, not the card alone.
+    covered: set[int] = set()
+    for i, b in enumerate(beats):
+        if b["band"] == "card":
+            nxt = beats[i + 1] if i + 1 < len(beats) else None
+            if nxt and nxt["band"] == "caption" and nxt.get("caption") == b["caption"]:
+                run_s = round(b["caption_readable_seconds"] + nxt["caption_readable_seconds"], 3)
+                for x in (b, nxt):
+                    x.update(caption_run=[b["name"], nxt["name"]], caption_run_seconds=run_s)
+                covered.add(i + 1)
+                if run_s < min_readable:
+                    raise CutError(f"card {b['name']} + beat {nxt['name']}: caption readable for {run_s}s, "
+                                   f"under the {min_readable}s floor")
+            elif b["caption_readable_seconds"] < min_readable:
+                raise CutError(f"card {b['name']}: caption readable for {b['caption_readable_seconds']}s, under the "
+                               f"{min_readable}s floor; lengthen it or repeat its caption on the next beat")
+        elif b["band"] == "caption" and i not in covered and b["caption_readable_seconds"] < min_readable:
+            raise CutError(f"beat {b['name']}: caption readable for {b['caption_readable_seconds']}s, under the "
+                           f"{min_readable}s floor; lengthen the beat")
+
+    # Final timeline: a dissolve overlaps the previous beat's tail; a cut does not.
     pos = 0
     for i, b in enumerate(beats):
         b["timeline_in"] = round(pos / fps, 3)
         b["timeline_out"] = round((pos + b["frames"]) / fps, 3)
-        pos += b["frames"] - (dissolve_frames if i < len(beats) - 1 else 0)
+        pos += b["frames"] - (joins[i + 1] if i < len(beats) - 1 else 0)
     total_frames = pos
-    transitions = [{"after": beats[i]["name"], "before": beats[i + 1]["name"],
-                    "kind": "fade" if dissolve_frames else "cut", "frames": dissolve_frames,
-                    "seconds": round(dissolve_frames / fps, 3)} for i in range(len(beats) - 1)]
+    transitions = [{"after": beats[i - 1]["name"], "before": beats[i]["name"], "kind": join_kinds[i],
+                    "frames": joins[i], "seconds": round(joins[i] / fps, 3)} for i in range(1, len(beats))]
 
     # --- 3. Pieces: footage over the background, band on top, composited in RGB.
     background = overlays_dir / overlays["background"]
@@ -383,9 +428,19 @@ def cut(args: argparse.Namespace) -> int:
               *COLOR_TAGS, "-an"]
     loop = ["-loop", "1", "-framerate", str(fps)]
     for b in beats:
+        n = b["frames"]
+        if b["kind"] == "card":
+            # The card image is the whole frame.
+            run(["ffmpeg", "-nostdin", "-v", "error", "-y", *loop, "-i", str(overlays_dir / b["band_file"]),
+                 "-filter_complex", "[0:v]format=gbrp,scale=out_color_matrix=bt709:out_range=tv,format=yuv420p[out]",
+                 "-map", "[out]", "-frames:v", str(n), *common, str(work / b["piece"])])
+            got = frame_count(work / b["piece"])
+            if got != n:
+                raise CutError(f"beat {b['name']}: piece has {got} frames, wanted {n}")
+            say(f"  {b['piece']}: {n} frames, card")
+            continue
         t = takes[b["take"]]
         g = t["footage"]
-        n = b["frames"]
         scale = f"scale={g['width']}:{g['height']}:flags=lanczos,setsar=1,format=gbrp"
         if b["kind"] == "recording":
             footage_in = ["-i", t["normalised"]]
@@ -414,7 +469,7 @@ def cut(args: argparse.Namespace) -> int:
             raise CutError(f"beat {b['name']}: piece has {got} frames, wanted {n}")
         say(f"  {b['piece']}: {n} frames, {b['kind']}" + (f" from frame {b['start_frame']}" if b["kind"] == "recording" else ""))
 
-    # --- 4. Assemble with dissolves to Apple's settings, video only.
+    # --- 4. Assemble with dissolves and cuts to Apple's settings, video only.
     inputs: list[str] = []
     filters: list[str] = []
     for i, b in enumerate(beats):
@@ -423,15 +478,16 @@ def cut(args: argparse.Namespace) -> int:
         filters.append(f"[{i}:v]scale={width}:{height},setsar=1,format=yuv420p,fps={fps},settb=AVTB,setpts=PTS-STARTPTS[v{i}]")
     if len(beats) == 1:
         filters.append("[v0]null[vout]")
-    elif dissolve_frames == 0:
-        filters.append("".join(f"[v{i}]" for i in range(len(beats))) + f"concat=n={len(beats)}:v=1:a=0[vout]")
     else:
         prev, length = "v0", beats[0]["frames"]
         for i in range(1, len(beats)):
             label = f"x{i}" if i < len(beats) - 1 else "vout"
-            filters.append(f"[{prev}][v{i}]xfade=transition=fade:duration={dissolve_frames / fps:.6f}:"
-                           f"offset={(length - dissolve_frames) / fps:.6f}[{label}]")
-            prev, length = label, length - dissolve_frames + beats[i]["frames"]
+            if joins[i]:
+                filters.append(f"[{prev}][v{i}]xfade=transition=fade:duration={joins[i] / fps:.6f}:"
+                               f"offset={(length - joins[i]) / fps:.6f}[{label}]")
+            else:
+                filters.append(f"[{prev}][v{i}]concat=n=2:v=1:a=0,settb=AVTB[{label}]")
+            prev, length = label, length - joins[i] + beats[i]["frames"]
     assembled = work / "assembled_video.mp4"
     run(["ffmpeg", "-nostdin", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(filters),
          "-map", "[vout]", "-frames:v", str(total_frames),

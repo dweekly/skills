@@ -62,6 +62,8 @@ struct Beat: Decodable {
     let caption: String?
     let disclosure: String?
     let tagline: String?          // logo band only; overrides the config's tagline
+    let card: Bool?               // a full-frame brand card: gradient, large caption, optional subline
+    let subline: String?          // card only
 }
 
 struct Config: Decodable {
@@ -121,6 +123,12 @@ let rowGapRatio: CGFloat = 0.012
 let sideMarginRatio: CGFloat = 0.06
 /// A caption shrunk below this fraction of its size to stay on one line is too long.
 let minShrink: CGFloat = 0.75
+/// Card caption and subline sizes, and the most lines each may wrap to.
+let cardCaptionFontRatio: CGFloat = 0.085
+let cardSublineFontRatio: CGFloat = 0.040
+let cardGapRatio: CGFloat = 0.035
+let cardCaptionMaxLines = 3
+let cardSublineMaxLines = 2
 
 // MARK: - Drawing
 
@@ -250,14 +258,38 @@ where name.hasPrefix("band_") && name.hasSuffix(".png") {
     try? FileManager.default.removeItem(at: outDir.appendingPathComponent(name))
 }
 
-// Background: gradient, band filled solid on top.
-do {
-    let ctx = makeContext(width: width, height: height, opaque: true)
+func drawGradient(_ ctx: CGContext) {
     let colors = [bandColor.cgColor, color(brand.gradientBottom).cgColor] as CFArray
     if let g = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!, colors: colors, locations: [0, 1]) {
         ctx.drawLinearGradient(g, start: CGPoint(x: w / 2, y: h), end: CGPoint(x: w / 2, y: 0),
                                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
     }
+}
+
+/// Centred text wrapped to `maxWidth`; fails when it needs more than `maxLines` lines.
+func wrapped(_ text: String, fontName: String, size: CGFloat, heavy: Bool, color c: NSColor, maxLines: Int,
+             label: String) -> (CTFramesetter, CGFloat) {
+    let para = NSMutableParagraphStyle()
+    para.alignment = .center
+    para.lineHeightMultiple = 1.05
+    let str = NSAttributedString(string: text, attributes: [
+        .font: font(fontName, size, heavy: heavy), .foregroundColor: c, .paragraphStyle: para])
+    let fs = CTFramesetterCreateWithAttributedString(str)
+    let fit = CTFramesetterSuggestFrameSizeWithConstraints(fs, CFRangeMake(0, 0), nil,
+                                                           CGSize(width: maxWidth, height: .greatestFiniteMagnitude), nil)
+    let frame = CTFramesetterCreateFrame(fs, CFRangeMake(0, 0),
+                                         CGPath(rect: CGRect(x: 0, y: 0, width: maxWidth, height: fit.height + 1), transform: nil), nil)
+    let lines = (CTFrameGetLines(frame) as? [CTLine]) ?? []
+    if lines.count > maxLines {
+        fail("\(label): \"\(text)\" wraps to \(lines.count) lines at this size; at most \(maxLines). Shorten it")
+    }
+    return (fs, ceil(fit.height))
+}
+
+// Background: gradient, band filled solid on top.
+do {
+    let ctx = makeContext(width: width, height: height, opaque: true)
+    drawGradient(ctx)
     ctx.setFillColor(bandColor.cgColor)
     ctx.fill(CGRect(x: 0, y: h - band, width: w, height: band))
     writePNG(ctx, to: outDir.appendingPathComponent("background.png"))
@@ -280,9 +312,10 @@ var seen = Set<String>()
 var beatEntries: [[String: Any]] = []
 for (i, beat) in config.beats.enumerated() {
     guard seen.insert(beat.name).inserted else { fail("beat name \(beat.name) is used twice") }
-    let kind = beat.band ?? (beat.caption != nil ? "caption" : "logo")
+    let kind = beat.card == true ? "card" : (beat.band ?? (beat.caption != nil ? "caption" : "logo"))
     let file = String(format: "band_%02d_%@.png", i + 1, beat.name)
-    let ctx = makeContext(width: width, height: height, opaque: false)
+    // A card is the whole frame, opaque; a band image is transparent outside its text.
+    let ctx = makeContext(width: width, height: height, opaque: kind == "card")
     var entry: [String: Any] = ["name": beat.name, "band": kind, "file": file]
 
     switch kind {
@@ -337,8 +370,33 @@ for (i, beat) in config.beats.enumerated() {
         entry["appName"] = config.appName
         entry["tagline"] = tagline
 
+    case "card":
+        guard let caption = beat.caption, !caption.isEmpty else { fail("beat \(beat.name): a card needs a caption") }
+        drawGradient(ctx)
+        let (capFS, capH) = wrapped(caption, fontName: brand.headlineFont, size: w * cardCaptionFontRatio * scale,
+                                    heavy: true, color: textColor, maxLines: cardCaptionMaxLines,
+                                    label: "card \(beat.name) caption")
+        let sub = beat.subline.map {
+            wrapped($0, fontName: brand.subheadlineFont, size: w * cardSublineFontRatio * scale, heavy: false,
+                    color: secondaryColor, maxLines: cardSublineMaxLines, label: "card \(beat.name) subline")
+        }
+        let gap = w * cardGapRatio * scale
+        let block = capH + (sub.map { gap + $0.1 } ?? 0)
+        if block > h * 0.8 { fail("card \(beat.name): text block (\(Int(block)) px) does not fit the frame") }
+        let x = (w - maxWidth) / 2
+        var top = h - (h - block) / 2
+        CTFrameDraw(CTFramesetterCreateFrame(capFS, CFRangeMake(0, 0),
+                                             CGPath(rect: CGRect(x: x, y: top - capH, width: maxWidth, height: capH), transform: nil), nil), ctx)
+        top -= capH + gap
+        if let (subFS, subH) = sub.map({ ($0.0, $0.1) }) {
+            CTFrameDraw(CTFramesetterCreateFrame(subFS, CFRangeMake(0, 0),
+                                                 CGPath(rect: CGRect(x: x, y: top - subH, width: maxWidth, height: subH), transform: nil), nil), ctx)
+        }
+        entry["caption"] = caption
+        if let s = beat.subline { entry["subline"] = s }
+
     default:
-        fail("beat \(beat.name): band must be \"logo\" or \"caption\", not \"\(kind)\"")
+        fail("beat \(beat.name): band must be \"logo\" or \"caption\" (or the beat a card), not \"\(kind)\"")
     }
     writePNG(ctx, to: outDir.appendingPathComponent(file))
     beatEntries.append(entry)

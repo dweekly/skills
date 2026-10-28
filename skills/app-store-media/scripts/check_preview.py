@@ -17,8 +17,10 @@ Prints one line per check, `ok` or `FAIL`, tagged [Apple], [house] or
           Connect's default poster) lit: mean luma above 60 of 255.
 [manifest] With --manifest (preview_cut.py's cut.json): every piece decodes
           to its beat's frame count within 2 frames and plays at rate 1, every
-          caption is readable for at least 2.5 s, one transition per pair of
-          beats, and the candidate's frame count matches the manifest.
+          caption is readable for at least 2.5 s (a card followed by a beat
+          with the same caption counts as one run), one transition per pair of
+          beats, each a 0-frame cut or a dissolve, beats minus dissolve
+          overlaps equal the total, and the candidate's frame count matches.
 
 --self-test builds known-bad inputs with ffmpeg (wrong size, 25 fps, too
 short, level too high, no audio, non-silent audio, audio longer than video, a
@@ -227,6 +229,28 @@ def check_candidate(path: Path, manifest_path: Path | None = None, size: tuple[i
     return rep
 
 
+def check_readability(rep: Report, beats: list[dict], floor: float) -> None:
+    """Apple asks that text stay on screen long enough to read. Recomputed from
+    the beats, not trusted from the cutter: a card directly followed by a
+    caption beat with the identical caption is one run, and the floor applies
+    to the run; any other card or caption beat must meet it alone."""
+    covered: set[int] = set()
+    for i, b in enumerate(beats):
+        own = float(b.get("caption_readable_seconds", 0))
+        if b.get("band") == "card":
+            nxt = beats[i + 1] if i + 1 < len(beats) else None
+            if nxt and nxt.get("band") == "caption" and nxt.get("caption") == b.get("caption"):
+                covered.add(i + 1)
+                run_s = own + float(nxt.get("caption_readable_seconds", 0))
+                rep.add("manifest", f"card {b['name']} + beat {nxt['name']} caption run readable >= {floor}s",
+                        run_s >= floor, f"{own}s + {nxt.get('caption_readable_seconds')}s = {run_s:.3f}s")
+            else:
+                rep.add("manifest", f"card {b['name']} caption readable >= {floor}s", own >= floor,
+                        f"{own}s (the next beat does not repeat its caption)")
+        elif b.get("band") == "caption" and i not in covered:
+            rep.add("manifest", f"beat {b['name']} caption readable >= {floor}s", own >= floor, f"{own}s")
+
+
 def check_manifest(rep: Report, path: Path, m: dict, work: Path) -> None:
     fps = int(m["fps"])
     beats = m["beats"]
@@ -241,12 +265,21 @@ def check_manifest(rep: Report, path: Path, m: dict, work: Path) -> None:
             want = int(b["frames"])
             return abs(n - want) <= FRAME_TOLERANCE, f"{n} frames, wanted {want} (+/-{FRAME_TOLERANCE})"
         rep.check("manifest", f"beat {b['name']} length", piece)
-        if b.get("band") == "caption":
-            floor = float(m.get("caption_min_readable_seconds", 2.5))
-            r = float(b.get("caption_readable_seconds", 0))
-            rep.add("manifest", f"beat {b['name']} caption readable >= {floor}s", r >= floor, f"{r}s")
-    rep.add("manifest", "one transition per pair of beats", len(m["transitions"]) == len(beats) - 1,
-            f"{len(m['transitions'])} for {len(beats)} beats")
+    check_readability(rep, beats, float(m.get("caption_min_readable_seconds", 2.5)))
+    trans = m["transitions"]
+    rep.add("manifest", "one transition per pair of beats", len(trans) == len(beats) - 1,
+            f"{len(trans)} for {len(beats)} beats")
+
+    def joins():
+        bad = [t for t in trans if t.get("kind") not in ("cut", "dissolve")
+               or (t["kind"] == "cut") != (int(t["frames"]) == 0)]
+        if bad:
+            return False, f"inconsistent transitions: {bad}"
+        total = sum(int(b["frames"]) for b in beats) - sum(int(t["frames"]) for t in trans)
+        return total == int(m["total_frames"]), (f"beats {sum(int(b['frames']) for b in beats)} frames minus "
+                                                 f"overlaps {sum(int(t['frames']) for t in trans)} = {total}, "
+                                                 f"manifest total {m['total_frames']}")
+    rep.check("manifest", "beats minus dissolve overlaps equals the total", joins)
 
     def total():
         n = decoded_frames(path)
@@ -355,7 +388,7 @@ def self_test() -> list[str]:
         m = {"fps": 30, "width": 886, "height": 1920, "caption_min_readable_seconds": 2.5, "total_frames": 480,
              "beats": [{"name": n, "piece": f"piece_{n}.mp4", "frames": 240, "rate": 1.0, "band": "caption",
                         "caption_readable_seconds": 7.4} for n in ("a", "b")],
-             "transitions": [{"after": "a", "before": "b", "frames": 0}]}
+             "transitions": [{"after": "a", "before": "b", "kind": "cut", "frames": 0}]}
         mp = work / "cut.json"
         mp.write_text(json.dumps(m))
         expect("known-good clip with an agreeing manifest", check_candidate(good, mp), None)
@@ -381,6 +414,33 @@ def self_test() -> list[str]:
         m4["total_frames"] = 540
         mp.write_text(json.dumps(m4))
         expect("a candidate 60 frames shorter than its manifest", check_candidate(good, mp), "matches the manifest")
+
+        m5 = json.loads(json.dumps(m))
+        m5["transitions"][0].update(kind="dissolve", frames=12)
+        mp.write_text(json.dumps(m5))
+        expect("a 12-frame dissolve the total does not account for", check_candidate(good, mp),
+               "beats minus dissolve overlaps")
+
+        # Cards: a 1.2 s card cut into a beat that repeats its caption is one
+        # readable run; the same card before a different caption is not.
+        ff("-f", "lavfi", "-i", "testsrc2=size=64x128:rate=30", "-frames:v", "36",
+           "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", str(work / "piece_card.mp4"))
+        ff("-f", "lavfi", "-i", "testsrc2=size=64x128:rate=30", "-frames:v", "204",
+           "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", str(work / "piece_a204.mp4"))
+        card = {"name": "intro", "piece": "piece_card.mp4", "frames": 36, "rate": 1.0, "band": "card",
+                "caption": "x", "caption_readable_seconds": 1.2}
+        beat_a = {"name": "a", "piece": "piece_a204.mp4", "frames": 204, "rate": 1.0, "band": "caption",
+                  "caption": "x", "caption_readable_seconds": round(204 / 30 - 0.6, 3)}
+        m6 = json.loads(json.dumps(m))
+        m6["beats"] = [card, beat_a, m["beats"][1]]
+        m6["transitions"] = [{"after": "intro", "before": "a", "kind": "cut", "frames": 0},
+                             {"after": "a", "before": "b", "kind": "cut", "frames": 0}]
+        mp.write_text(json.dumps(m6))
+        expect("a 1.2 s card cut into a beat that repeats its caption", check_candidate(good, mp), None)
+        m6["beats"][0]["caption"] = "y"
+        mp.write_text(json.dumps(m6))
+        expect("a 1.2 s card cut into a beat with a different caption", check_candidate(good, mp),
+               "card intro caption readable")
 
         # Regression: a sparse VFR take (frames only in the first second of every
         # 4 s, as simctl writes a screen that stops changing), and a beat that

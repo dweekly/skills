@@ -39,7 +39,10 @@ or one caption line with an optional disclosure line, and the app footage
 scaled uniformly to fit below the band, centred, on the brand gradient.
 Nothing jumps at a transition and no app text is ever covered. Beats play at
 recorded speed and are joined by 0.4 s dissolves; captions fade with their
-beat. That shape came out of a sibling app's review of its first cut, which
+beat. Short brand cards (full-frame gradient, large caption, about a second,
+hard cuts in and out) can sit between views; a card whose caption the next
+beat repeats counts with that beat for readability
+([preview-config.md](preview-config.md#readability)). That shape came out of a sibling app's review of its first cut, which
 opened on a text card, replayed navigation at 3x and 4x, and stopped the film
 with full-frame cards; all three read as frenetic to a muted viewer.
 
@@ -150,14 +153,18 @@ and exits non-zero if any fails:
    frame at 5.0 s lit (mean luma above 60 of 255, measured on the frame at
    that time, never the keyframe a seek lands on).
 3. **[manifest]** every piece decodes to its beat's frame count within two
-   frames and plays at rate 1; every caption readable for at least 2.5 s;
-   one transition per pair of beats; the candidate's frame count matches.
+   frames and plays at rate 1; every caption readable for at least 2.5 s, a
+   card and a following beat with the same caption counted as one run; one
+   transition per pair of beats, each a 0-frame cut or a dissolve; beats minus
+   dissolve overlaps equals the total; the candidate's frame count matches.
 
 `check_preview.py --self-test` proves each check can fail: wrong size, 25 fps,
 10 s, Level 5.1, no audio, a quiet tone, audio longer than video, a disabled
 track, black frame 0, a black poster frame behind a bright keyframe, a
-one-frame beat, an unreadable caption, a sped-up beat and a short candidate
-each fail their check, and a known-good file passes them all.
+one-frame beat, an unreadable caption, a sped-up beat, a short candidate, a
+dissolve the total does not account for, and a 1.2 s card before a different
+caption each fail their check; a known-good file passes them all, and so does
+a 1.2 s card cut into a beat that repeats its caption.
 
 ## What only a person can check
 
