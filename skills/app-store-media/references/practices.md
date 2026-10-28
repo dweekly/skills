@@ -68,11 +68,12 @@ Preview), October 2026:
   3:2 image shown whole (not cropped to the safe area). Use one only if it
   beats the first three screenshots, which already carry three benefits at a
   readable size. Empty margin around safe-area-only content shows as dead space.
-- **The header crops differently per device.** iPhone: above the app name and
-  Get button (no overlap), about the centre half of the width, full height.
-  iPad: full width, cut off a little below the safe area, with the store's tab
-  bar over the top. Put the whole message inside the safe area and let
-  supporting art run below it.
+- **The header crops differently per device** (measured in the Device Preview):
+  iPhone shows the centre ~64% of the width at full height, above the app name
+  and Get button; iPad shows the full width but only the vertical middle, about
+  18% to 88% of the height, with the store's tab bar over the top centre. Keep
+  faces and the message inside Apple's safe area (y 30% to 70%); a face in the
+  top fifth is cut on iPad.
 - **Size for a phone.** A one-line headline across the safe area read at about
   11 pt on an iPhone; two lines filling the safe area's height roughly doubled
   it. Check the preview on iPhone and iPad before submitting.
@@ -92,8 +93,9 @@ text, brand colours in the set dressing.
   UI is sharp.
 - Image models put a phone on a desk low in the frame and the subject's face
   high, whatever the prompt says. iPhone shows the full height (fine); iPad
-  cuts the bottom quarter (the phone goes). Make several drafts, simulate both
-  crops side by side, and let the owner pick.
+  shows only the middle band, so a high face loses its eyes. Ask for the face a
+  third of the way down, make several drafts, simulate both crops side by side
+  with the measured bands, and let the owner pick.
 - Save the prompt, model, and the source image's location in the app's repo.
 
 ## Measuring after release
