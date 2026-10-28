@@ -77,6 +77,25 @@ Preview), October 2026:
   11 pt on an iPhone; two lines filling the safe area's height roughly doubled
   it. Check the preview on iPhone and iPad before submitting.
 
+## A photographic header
+
+A screenshot strip makes a weak header; Apple's guidance is to "express your
+brand" with one clear idea. What worked (October 2026): a wide, warm scene of
+the app in use in real life (for a visit recorder: the doctor mid-conversation,
+seen from the patient's seat, the patient's phone on the desk recording), no
+text, brand colours in the set dressing.
+
+- Generate the scene with an image model, with the phone's screen as flat
+  chroma-key green (#00FF00), then place a **real capture** on it with
+  `scripts/place_screen.py`. Never let the model draw the app's UI.
+- Generate at 21:9; enlarge to 3840x1646 first, then place the screen, so the
+  UI is sharp.
+- Image models put a phone on a desk low in the frame and the subject's face
+  high, whatever the prompt says. iPhone shows the full height (fine); iPad
+  cuts the bottom quarter (the phone goes). Make several drafts, simulate both
+  crops side by side, and let the owner pick.
+- Save the prompt, model, and the source image's location in the app's repo.
+
 ## Measuring after release
 
 - **Do not read the weekly App Analytics email's conversion figure as a listing

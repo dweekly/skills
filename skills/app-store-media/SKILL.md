@@ -67,6 +67,9 @@ Ask them together, each with a recommended default, before capturing anything:
 6b. **Header and search-results assets** (iOS 27 and later, optional): render
    with `scripts/creative_assets.swift <config.json> [--guides]`, inside the
    safe areas from Apple's templates, and approve them on the contact sheet too.
+   For the header, a photographic scene of the app in use usually beats a
+   screenshot strip: generate it with a chroma-key phone screen and place the
+   real capture with `scripts/place_screen.py` (see references/practices.md).
 7. **Upload** to a new app version, through the App Store Connect API where a
    key exists, otherwise the web Media Manager.
    [references/upload.md](references/upload.md).
