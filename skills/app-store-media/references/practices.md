@@ -59,6 +59,24 @@ shadows, no cropping, latest device only). Third-party device renderings
 (fastlane frameit's set) depict Apple products, which Apple's marketing
 guidelines discourage. Detail in [framing.md](framing.md).
 
+## Header and search-results creative assets
+
+Learned from App Store Connect's Device Preview (Header and Search Results >
+Preview), October 2026:
+
+- **A search-results card replaces the three screenshots** in search with one
+  3:2 image shown whole (not cropped to the safe area). Use one only if it
+  beats the first three screenshots, which already carry three benefits at a
+  readable size. Empty margin around safe-area-only content shows as dead space.
+- **The header crops differently per device.** iPhone: above the app name and
+  Get button (no overlap), about the centre half of the width, full height.
+  iPad: full width, cut off a little below the safe area, with the store's tab
+  bar over the top. Put the whole message inside the safe area and let
+  supporting art run below it.
+- **Size for a phone.** A one-line headline across the safe area read at about
+  11 pt on an iPhone; two lines filling the safe area's height roughly doubled
+  it. Check the preview on iPhone and iPad before submitting.
+
 ## Measuring after release
 
 - **Do not read the weekly App Analytics email's conversion figure as a listing
