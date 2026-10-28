@@ -1,0 +1,46 @@
+{
+  "brand": {
+    "gradientTop": "#1F3A5F",
+    "gradientBottom": "#3E7CB1",
+    "accent": "#F2B134",
+    "headline": "#FFFFFF",
+    "subheadline": "#FFFFFFE0",
+    "headlineFont": "Helvetica-Bold",
+    "subheadlineFont": "Helvetica"
+  },
+  "logo": "logo.png",
+  "appName": "Example",
+  "tagline": "Your lists, done together",
+  "width": 886,
+  "height": 1920,
+  "fps": 30,
+  "bandRatio": 0.14,
+  "dissolve": 0.4,
+  "captionFade": 0.3,
+  "captionMinReadable": 2.5,
+  "takes": {
+    "walkthrough": {
+      "raw": "takes/walkthrough.mov",
+      "marks": "takes/walkthrough.marks.tsv",
+      "expectMarks": ["home", "homeEnd", "compose", "composeEnd", "done", "doneEnd"]
+    },
+    "share": {
+      "raw": "takes/share.mov",
+      "marks": "takes/share.marks.tsv",
+      "expectMarks": ["share", "shareEnd"]
+    }
+  },
+  "beats": [
+    {"name": "opening", "take": "walkthrough", "still": "home", "seconds": 3.0, "band": "logo"},
+    {"name": "home", "take": "walkthrough", "start_mark": "home", "end_mark": "homeEnd", "seconds": 5.0,
+     "caption": "Every list in one place"},
+    {"name": "compose", "take": "walkthrough", "start_mark": "compose", "end_mark": "composeEnd", "seconds": 5.5,
+     "caption": "Add an item in seconds"},
+    {"name": "share", "take": "share", "start_mark": "share", "end_mark": "shareEnd", "seconds": 5.0,
+     "caption": "Share with your household", "disclosure": "Sharing requires an account"},
+    {"name": "done", "take": "walkthrough", "start_mark": "done", "end_mark": "doneEnd", "seconds": 5.0,
+     "caption": "Check it off together"},
+    {"name": "end", "take": "walkthrough", "still": "last", "seconds": 3.0, "band": "logo",
+     "tagline": "Lists that keep up with you"}
+  ]
+}

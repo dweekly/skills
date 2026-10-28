@@ -10,4 +10,11 @@
 - Plugin versions are omitted on purpose, so installs track commits; add semver once a skill has outside users who need stability.
 - ballot-coach has not yet been run end to end with a real user.
 - voter-guides.md is California-heavy; research agents find local equivalents elsewhere, but the offered list should broaden after a non-California run.
+- app-store-media preview pipeline (`preview_overlays.swift`, `preview_cut.py`, `check_preview.py`):
+  - No bundled recorder. Booting the simulator, pinning the status bar, running the UI test under `simctl io recordVideo` and turning its log into marks files is described in references/preview-video.md, not scripted; a sibling app's shell script is the model for a generic `record_preview.sh`.
+  - Proven end to end on synthetic sparse takes only (`scripts/test_preview_pipeline.sh`), not on a real simulator take; the defect regression is a synthetic sparse take, not a retained real one.
+  - A piece's start is only as exact as the recorder-start poll (up to six frames); lengths are machine-checked, start alignment is a visual check.
+  - 886x1920 portrait only in practice; iPad (1200x1600) and landscape sizes are accepted by the checker but untested, and the sibling app's Google Play landscape layout was not ported.
+  - Layout is one shape (band above, footage below) with fixed text fractions plus `textScale`; captions set over the footage, and per-beat layout, are not supported.
+  - Normalised takes are re-encoded on every run (no cache), and the band-default rule is restated in Swift and Python (the overlays.json comparison catches drift).
 - app-store-media: the framer's iPhone Duo corner radius and font scale are starting values, not yet checked against real Duo captures. The uploader is described, not bundled: a generic `upload_store_media.py` (config-driven, display types looked up rather than hard-coded) would remove the copy-and-edit step. The contact-sheet builder is still per-app.

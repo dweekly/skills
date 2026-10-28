@@ -1,6 +1,6 @@
 ---
 name: app-store-media
-description: Produces App Store screenshots (and plans the App Preview video) for an iOS app from simulator captures, end to end, so that every size Apple accepts is covered, every caption is deliberate, and the result passes App Store Connect on the first upload. Covers which sizes are actually required, capturing clean demo state, scripted framing with brand captions, caption layout and ordering choices with the evidence behind them, a contact sheet for the owner's approval, machine validation, uploading, and measuring the result afterwards. Use when preparing or refreshing an App Store listing, adding a new device class such as iPhone Duo, or planning a preview video; not for in-app UI design.
+description: Produces App Store screenshots and the App Preview video for an iOS app from simulator captures, end to end, so that every size Apple accepts is covered, every caption is deliberate, and the result passes App Store Connect on the first upload. Covers which sizes are actually required, capturing clean demo state, scripted framing with brand captions, caption layout and ordering choices with the evidence behind them, a contact sheet for the owner's approval, machine validation, uploading, and measuring the result afterwards; and a preview video cut from UI-test takes by a JSON storyboard, with checks that prove it meets Apple's spec. Use when preparing or refreshing an App Store listing, adding a new device class such as iPhone Duo, or making a preview video; not for in-app UI design.
 license: MIT
 ---
 
@@ -70,6 +70,10 @@ Ask them together, each with a recommended default, before capturing anything:
    For the header, a photographic scene of the app in use usually beats a
    screenshot strip: generate it with a chroma-key phone screen and place the
    real capture with `scripts/place_screen.py` (see references/practices.md).
+6c. **Preview video** (optional): write the storyboard as a preview config,
+   record UI-test takes with marks, then `scripts/preview_overlays.swift`,
+   `scripts/preview_cut.py` and `scripts/check_preview.py`, and watch the
+   candidate; it goes on the contact sheet for approval too. [references/preview-video.md](references/preview-video.md).
 7. **Upload** to a new app version, through the App Store Connect API where a
    key exists, otherwise the web Media Manager.
    [references/upload.md](references/upload.md).
@@ -86,6 +90,8 @@ Ask them together, each with a recommended default, before capturing anything:
   The framer draws into an opaque context; the checker verifies it.
 - **Frames are allowed on screenshots and banned in preview video.** Guideline
   2.3.4: previews "may only use video screen captures of the app itself".
+- **A preview never carries captured audio.** Its track is generated silence,
+  and the checker fails on any nonzero sample.
 - **Show the real app.** No features the build does not have, no prices, no
   other platforms' devices, no competitor names. A shot that would oversell
   (for example large text where only part of the UI scales) waits.
@@ -102,5 +108,6 @@ Ask them together, each with a recommended default, before capturing anything:
 - [references/framing.md](references/framing.md): the framer, its config schema, layout rules per canvas shape, and why a drawn bezel.
 - [references/validation.md](references/validation.md): the automated checks and the visual checklist.
 - [references/upload.md](references/upload.md): new version, API upload with display-type names, web upload, release settings.
-- [references/preview-video.md](references/preview-video.md): App Preview video production, its stricter spec and the checks a cut must pass.
+- [references/preview-video.md](references/preview-video.md): App Preview video end to end: storyboard, recording takes and marks, synthetic audio input, how the cut works, the checks and the visual review.
+- [references/preview-config.md](references/preview-config.md): the preview config (storyboard as JSON) that the overlay, cut and check scripts share, with a worked example in references/examples/preview.example.json.
 - [references/further-reading.md](references/further-reading.md): other public tools and skills worth studying, and what each does differently.
