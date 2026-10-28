@@ -81,6 +81,37 @@ The page does not say whether both displays are required; supply both.
 
 One 13" set covers every iPad. The iPad Pro 13-inch (M4 or M5) simulator captures 2064x2752.
 
+## Creative assets: product-page header and search results (iOS 27 and later)
+
+Source: Apple, [Creative assets specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications)
+and [Asset best practices](https://developer.apple.com/app-store/asset-best-practices/), read 2026-10-28.
+Both are optional; without a search-results asset, In-App Events, previews and screenshots show instead.
+
+| Placement | Aspect | Size | Formats |
+|---|---|---|---|
+| Product page header | 21:9 | 3840x1646 | jpeg, jpg, png |
+| Search results | 3:2 | 1920x1280 to 3840x2560 | jpeg, jpg, png |
+| Either (universal) | 16:9 | 5244x2950 | png |
+
+Video is also accepted for both (same sizes, 30 or 60 fps, 5 to 30 s, muted
+by default, loops). No alpha. **Safe areas** come only from Apple's templates
+(Photoshop, Pixelmator, Sketch, Figma, linked from the best-practices page;
+the PSDs have an "Art Safe Area" layer). Measured from the PSDs on 2026-10-28,
+top-left origin:
+
+| Template | Canvas | Art safe area (x0, y0, x1, y1) |
+|---|---|---|
+| Product page header | 3840x1646 | 1097, 493, 2743, 1154 |
+| Search results | 3840x2560 | 836, 765, 3004, 1795 |
+| Universal | 5244x2950 | 1921, 660, 3323, 1622 |
+
+Everything that matters (text, the key UI) goes inside; outside it the art
+may be cropped on some devices or sit under the App Store's overlay. Rules:
+one clear idea (header); make the app's purpose obvious and show the real
+experience (search); no prices, URLs, copyright symbols, unverifiable claims,
+other platforms' logos, or Apple recognitions; 4+ content; localise text.
+`scripts/creative_assets.swift` renders both from the framer's config.
+
 ## App Preview video (summary; detail in preview-video.md)
 
 - Optional; 15 to 30 seconds; up to 3 per size per locale; max 500 MB.

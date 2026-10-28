@@ -64,6 +64,9 @@ Ask them together, each with a recommended default, before capturing anything:
    sizes per class, no alpha channel, 1 to 10 per set, required classes present.
    Then the visual checklist in
    [references/validation.md](references/validation.md).
+6b. **Header and search-results assets** (iOS 27 and later, optional): render
+   with `scripts/creative_assets.swift <config.json> [--guides]`, inside the
+   safe areas from Apple's templates, and approve them on the contact sheet too.
 7. **Upload** to a new app version, through the App Store Connect API where a
    key exists, otherwise the web Media Manager.
    [references/upload.md](references/upload.md).
