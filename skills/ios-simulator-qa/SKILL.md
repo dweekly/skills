@@ -329,7 +329,20 @@ this skill; do not copy their text into a repo. On Xcode 27.1 (27A9275):
   to SwiftUI behavior that changed in the 27 SDK.
 
 The others in that build (App Intents, document-based apps, C bounds safety,
-Xcode security settings, translation) are not simulator QA.
+Xcode security settings, translation) are not simulator QA. Apple also
+mentions `xcrun agent skills export`; use `plugin path` instead, because
+`export` wrote out only part of the set on 27.0 and the 27.1 beta.
+
+The same plugin's `.mcp.json` runs `xcrun mcpbridge`, which gives an outside
+agent Xcode's own tools. Apple's
+[Xcode, agents, and you](https://developer.apple.com/videos/play/wwdc2026/259/)
+(WWDC26 session 259) shows agents building, rendering SwiftUI previews on the
+current run destination, running tests, searching Apple's documentation and
+calling framework-supplied tools (translation, for one). For QA: a rendered
+preview is evidence for one size and state, not a run of the app; a
+preview-based self-check by an agent does not replace the screenshots and
+flows above. In practice the bridge connected only while Xcode was running
+with the workspace open.
 
 ## Related
 

@@ -31,7 +31,7 @@ A full screenshot can be rotated relative to native pixel dimensions. XCTest fra
 
 ### Setting the pose
 
-The pose (closed, partially open, fully open) is set by hand in Device Hub (`/Applications/Xcode.app/Contents/Applications/DeviceHub.app`), with the buttons at the bottom of the device's window. It is not in Simulator.app's menus, and neither `simctl` nor XCTest has an API for it (Xcode 27.1). Device Hub may open showing a physical device; pick the simulator first. Display resizing or powering a screen with `simctl io` is not a fold, and `screenConfig power` on a Duo display crashed SpringBoard. So a pose is a precondition: ask the person to set it once in Device Hub, confirm it in a screenshot of every display, then run the rest unattended. A simulator reboot puts the pose back to closed (see SKILL.md, "A reboot resets more than the app"). Check current `simctl io help` and Device Hub on a new Xcode before concluding pose automation is still unavailable.
+The pose (closed, partially open, fully open) is set by hand in Device Hub (`/Applications/Xcode.app/Contents/Applications/DeviceHub.app`), with the buttons at the bottom of the device's window (Apple's [Prepare your app for iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111461/) names them: open, close, rotate, fold). It is not in Simulator.app's menus, and neither `simctl` nor XCTest has an API for it (Xcode 27.1). Device Hub may open showing a physical device; pick the simulator first. Display resizing or powering a screen with `simctl io` is not a fold, and `screenConfig power` on a Duo display crashed SpringBoard. So a pose is a precondition: ask the person to set it once in Device Hub, confirm it in a screenshot of every display, then run the rest unattended. A simulator reboot puts the pose back to closed (see SKILL.md, "A reboot resets more than the app"). Check current `simctl io help` and Device Hub on a new Xcode before concluding pose automation is still unavailable.
 
 ## XCUITest selectors on the Duo
 
@@ -65,6 +65,22 @@ Summarised from Apple's tech talk [Design for iPhone Duo](https://developer.appl
 - **Inner display.** The talk calls a stretched iPhone layout the thing to avoid, and offers split views, a layout that reflows into columns, or a tab bar shown as a sidebar, with the same hierarchy as the outer display. Check that opening and closing the device keeps the user at the same place in the hierarchy.
 - **Never tie functionality to a pose.** An optional tabletop layout (media on top, controls on a stable base) is fine if it has the same controls and hierarchy as every other pose. Check that every action available in one pose is available in all of them.
 
+## What Apple's engineering talks change about testing
+
+Summarised from four tech talks: [Prepare your app for iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111461/) (111461), [Raise the bar with iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111462/) (111462), [Strike a pose with adaptive layouts on iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111463/) (111463) and [Leverage multiple displays and scenes on iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111464/) (111464). Only what changes how a build is tested is kept here; the talks have the APIs.
+
+- **The SDK decides what you are testing** (111461). An app not built with the iOS 27 SDK runs in a familiar iPhone-sized area (on the closed outer display, left of the status bar and camera); built with 27 it also fills the area left of the status bar on the inner display; only a 27.1 SDK build runs edge to edge with vertical bars. Record the SDK the build was linked against, and do not file letterboxing in an older build as a layout bug.
+- **Size classes per display** (111461): outer portrait is compact width and regular height, outer landscape compact in both, inner regular in both. The inner display ignores the app's supported orientations, and `UIRequiresFullScreen` does not stop resizing on open and close. Code that reads the main screen is ambiguous with two displays; look for it when one display lays out wrongly.
+- **Split View and asymmetric insets** (111461). Vertical bars can sit on the left (landscape, and the left half of a split), so safe areas and margins differ side to side. Test it in Device Hub on the inner display: drag the app by the home indicator to one side, then to the other, and check both.
+- **Vertical bars only come from system containers** (111462). Toolbar, navigation and tab bar content goes vertical only when the bars belong to `NavigationStack`, `TabView`, `UINavigationController` and the like; a hand-made `UIToolbar` or `UINavigationBar` stays horizontal. In a 27.1 build, a horizontal bar on the outer display usually means a custom bar. In a split view only the detail column's toolbar goes vertical.
+- **Bar content to check** (111462). Items with a symbol move to the vertical bar; text-only items stay horizontal. Back or close should be at the top, then the prominent action. Every item needs a title even if it shows only a symbol, because overflow menus show titles. The bar stays on the same hardware side in right-to-left languages, so test one. The vertical bar has a background only with Reduce Transparency on; check custom item legibility both ways.
+- **Overflow** (111462). Items overflow more on the outer display in landscape, and when the keyboard or Picture in Picture takes space. Check that frequent actions and badged items stay visible longest, and that whatever overflows is reachable from the ellipsis menu. Apps can choose whether toolbar or tab bar compresses first, or turn vertical bars off per view or sheet; a horizontal bar may be deliberate.
+- **Reserved regions** (111463). The fold is a region that exists only when partially folded (zero width when flat), and the inner FaceTime camera is an occlusion region only while that camera is active. Test custom controls in the folded pose, and with the front camera running if the app uses it. Scrolling content is meant to cross the fold; alerts, menus, popovers and action sheets move off it on their own, and a split view goes to 50/50.
+- **Arrangements** (111463). The new split and overlay arrangement containers can show only the primary view when the space cannot split on the allowed axis. Where an app uses them, check the secondary content is still reachable in every pose.
+- **Hinge-driven features** (111464). The hinge API reports closed, partially open and fully open plus a continuous angle, and nothing on a device without a hinge. A feature driven by it needs a pose change in Device Hub to exercise, and a check that it is inert on other iPhones.
+- **Multiple windows** (111464). New windows can be opened only on the inner display. Try the app's "new window" action on the outer display: it should be hidden or fail gracefully, not crash or do nothing silently.
+- **Camera capture accessory** (111464). A camera app can show UI on the outer display while its camera session runs full screen on the inner one, and the system can withdraw that at any time (closing the device, for one). Check the app follows the availability change.
+
 ## A practical matrix
 
 Select scenarios relevant to the app rather than exhaustively combining every dimension:
@@ -93,7 +109,7 @@ Recheck current versions and issue status before proposing a workaround. Preserv
 
 - [Preparing your app for iPhone Duo](https://developer.apple.com/documentation/technologyoverviews/preparing-your-app-for-iphone-duo)
 - [Designing for iPhone Duo](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo)
-- [Design for iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111466/) (Apple tech talk 111466)
+- [Design for iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111466/) (Apple tech talk 111466), and tech talks 111461 to 111464 cited above
 - Xcode's `app-resizability` skill (see SKILL.md, "Apple's skills that ship with Xcode").
 - Installed SDK headers and `xcrun simctl io help` for the selected Xcode.
 
