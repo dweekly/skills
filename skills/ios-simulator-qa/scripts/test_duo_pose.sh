@@ -4,7 +4,8 @@
 # or if PosterBoard crashes while the poses change.
 #
 #   test_duo_pose.sh            create a temporary iPhone Duo on the newest iOS runtime that has
-#                               one, boot it, test, then shut it down and delete it
+#                               one, boot it, test, then shut it down and delete it (kept, shut
+#                               down, when a check fails)
 #   test_duo_pose.sh <UDID>     use that booted iPhone Duo instead (its pose is changed and left open)
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -15,7 +16,12 @@ failures=0
 cleanup() {
   if [ -n "$created" ]; then
     xcrun simctl shutdown "$created" >/dev/null 2>&1
-    xcrun simctl delete "$created" && echo "deleted temporary simulator $created"
+    if [ $failures -eq 0 ]; then
+      xcrun simctl delete "$created" && echo "deleted temporary simulator $created"
+    else
+      # Keep the evidence: its log and crash reports are lost with it.
+      echo "kept temporary simulator $created (shut down) for its log; boot it and read 'xcrun simctl spawn $created log show', then 'xcrun simctl delete $created'"
+    fi
   fi
 }
 trap cleanup EXIT
@@ -36,6 +42,8 @@ posterboard_problem() {
     echo "the PosterBoard that was running (PID $b_pid) is gone (now PID $a_pid, last exit $a_exit)"
   elif [ "$a_exit" != "$b_exit" ] && [ "$a_exit" != "0" ]; then
     echo "its last exit status changed to $a_exit"
+  elif [ "$spawns" -gt 0 ] && [ "$a_pid" = "-" ] && [ "$a_exit" != "0" ]; then
+    echo "it was spawned during the test and is no longer running, last exit status $a_exit"
   elif [ "$spawns" -gt 1 ] && [ "$a_exit" != "0" ]; then
     echo "it was spawned $spawns times, last exit status $a_exit"
   fi
@@ -45,7 +53,7 @@ posterboard_problem() {
 # The verdict above is the only thing between a PosterBoard crash and a PASS, so check it on fixed
 # readings first (no device needed). Format: before|after|spawns|expect (crash or ok).
 for case in "101 0|- -5|0|crash" "101 0|101 0|0|ok" "50448 -5|50448 -5|0|ok" "101 0|202 -5|1|crash" \
-            "101 0|202 0|1|crash" "- -5|303 -5|1|ok" "- 0|- -5|0|crash" "101 0||0|crash" "||0|ok"; do
+            "101 0|202 0|1|crash" "- -5|303 -5|1|ok" "- 0|- -5|0|crash" "- -5|- -5|1|crash" "101 0||0|crash" "||0|ok"; do
   IFS='|' read -r b a n want <<<"$case"
   got=ok; [ -n "$(posterboard_problem "$b" "$a" "$n")" ] && got=crash
   if [ "$got" != "$want" ]; then
