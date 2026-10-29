@@ -249,6 +249,10 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
   (or use `adb shell -n`).
 - **zsh does not word-split unquoted variables.** `set -- $bounds` or `for x in $list` gets one
   word in zsh. Run such scripts with `bash`, or split explicitly (`${=var}`).
+- **`./gradlew ... | tail; echo $?` reports tail's exit, not Gradle's.** A build whose output
+  was filtered through a pipe "passed" while the APK on disk was half an hour old, and the next
+  device check ran the old code. Check the APK's timestamp, or capture Gradle's status directly
+  (`./gradlew ... > log 2>&1; echo $?`, or `set -o pipefail`) before installing.
 - **A waiter built on `pgrep -f <pattern>` waits forever** when the pattern appears in the
   waiter's own command line (`until ! pgrep -f "matrix/run1"; do sleep 10; done` matches
   itself). Record the PID when you start the job and wait on it: `while kill -0 $pid; do ...`.
