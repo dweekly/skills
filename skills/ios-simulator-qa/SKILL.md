@@ -1,15 +1,16 @@
 ---
 name: ios-simulator-qa
-description: Builds, runs, drives and visually verifies iPhone apps on the Simulator, including iPhone Duo, and turns a verified walkthrough into an unattended XCTest or Maestro flow. Covers picking a device by runtime and UDID, a beta Xcode without xcode-select, simulators as shared state, the missing tab bar on iPad and iPhone Duo under XCUITest, reading a test log for crashes versus failures, multi-display capture and poses on the Duo, system UI that sits outside the app's tree, and honest scoping of evidence. Use for any simulator test run, QA pass or test-automation task; not for ordinary iOS implementation with no testing in scope.
+description: Builds, runs, drives and visually verifies iPhone apps on the Simulator, including iPhone Duo, and turns a verified walkthrough into an unattended XCTest or Maestro flow. Covers picking a device by runtime and UDID, a beta Xcode without xcode-select, simulators shared by several agents on one Mac, what a reboot resets, per-simulator audio routing, the missing tab bar on iPad and iPhone Duo under XCUITest, reading a test log for crashes versus failures, multi-display capture and poses on the Duo, frame-by-frame checks of transitions, Apple's Xcode-embedded skills, system UI that sits outside the app's tree, and honest scoping of evidence. Use for any simulator test run, QA pass or test-automation task; not for ordinary iOS implementation with no testing in scope.
 license: MIT
 ---
 
 
 # iPhone simulator QA
 
-Two kinds of content. The **run mechanics** (first six sections) were each
-earned on real runs in September 2026 (Xcode 27.0 and the 27.1 beta,
-macOS 27) and are checks or commands, not advice. The **method** sections
+Two kinds of content. The **run mechanics** (every section before
+"Establish the target and test state") were each earned on real runs in
+September and October 2026 (Xcode 27.0, the 27.1 beta and 27.1, macOS 27)
+and are checks or commands, not advice. The **method** sections
 after them come from a Duo QA pass on another app and are the
 working practice for driving and verifying a flow. For Duo displays and
 poses read [references/duo.md](references/duo.md); for turning a
@@ -77,6 +78,78 @@ wait until no other simulator it did not boot is running a test, because a
 concurrent UI run competes for the same CPU. (That timing skew is a
 precaution taken, not a measurement made.)
 
+When several agents or a CI runner share one Mac (seen October 2026, Xcode 27.1):
+
+- **Never quit Simulator.app.** Quitting it shut down every booted simulator
+  on the machine, other agents' and CI's included. To rotate, use the Device
+  menu or `XCUIDevice.shared.orientation`; to reset, shut down and boot your
+  own UDID.
+- **Kill only PIDs you started.** `pkill -f "log stream"` killed another
+  agent's log capture. Record the PID when you start a background process
+  and `kill` that PID.
+- **Create your own simulators** with a name prefix that says whose they are
+  (`xcrun simctl create <prefix>-<purpose> <devicetype> <runtime>`), pin
+  their UDIDs, and delete only those at the end.
+- A Claude Code `PreToolUse` hook can deny the mechanical half: quitting
+  Simulator.app, `killall` and pattern `pkill`, `simctl ... all` and any
+  `simctl` aimed at `booted`, and changes to the Mac's audio defaults. The
+  author's is `guard_shared_simulators.sh`; the rules above are what it
+  cannot check.
+
+## A reboot resets more than the app
+
+Rebooting a simulator, for any reason, reset its per-device audio routes (one came back on the Mac's default microphone, and an
+agent recorded through it), its orientation, the Duo pose (back to closed) and
+its `simctl status_bar` overrides (the cellular setting was lost). After any
+reboot, re-check each one before capturing or recording:
+`simctl status_bar <udid> override ...` again, the audio route with the check
+in the next section, and the pose and orientation in a screenshot.
+
+After any XCUITest run on a simulator, AXe saw an empty accessibility tree
+until that simulator rebooted, so plan AXe work before XCUITest, or budget a
+reboot and the re-checks above.
+
+### A system process crash-looping on one simulator
+
+Seen once: after an abrupt shutdown, PosterBoard crash-looped every few
+seconds (`EXC_BREAKPOINT` in `-[PRPosterDescriptor _initWithPath:]` called from
+`PBFAmbientRoleCoordinator`) because the simulator's wallpaper store was
+corrupt. A clean restart did not fix it; with the simulator shut down, moving
+`<device>/data/Library/Application Support/PRBPosterExtensionDataStore` aside
+did. To find which simulator a crash belongs to and confirm a loop:
+
+```sh
+grep -l "CoreSimulator.SimDevice.<UDID>" ~/Library/Logs/DiagnosticReports/*.ips   # the Coalition line names the simulator
+xcrun simctl spawn <udid> launchctl list | grep <label>   # last exit status; -5 is SIGTRAP
+xcrun simctl spawn <udid> log show --last 5m --predicate 'process == "launchd_sim"' | grep <label>   # respawns
+```
+
+## Simulator audio input and output
+
+An app that records needs a known input, and the Mac's own microphone is
+never it. Route the simulator, not the Mac: never change the Mac's default
+input or output devices.
+
+- Each simulator has its own host audio route in CoreSimulator, and
+  `simctl` (Xcode 27.1) has no command for it. A small tool can set it
+  through CoreSimulator's private API: the device's `io.ioPorts`, the audio
+  port's `descriptor`, then
+  `routeGuestDeviceScope:toHostDeviceUID:completionQueue:completionHandler:`,
+  with `guestInputHostDeviceUID` and `guestOutputHostDeviceUID` to read it
+  back.
+- Scope `1` set the input. Scope `0x676c6f62` (`'glob'`) set only the output on
+  several simulators, though one agent saw it set both; the `'inpt'` and
+  `'outp'` constants did nothing. Set scope `1` and `'glob'`, then read both
+  UIDs back.
+- To undo, route to `__sim__hostUseSystemDefaultDeviceUID`. An empty UID
+  pinned the simulator to whatever the Mac's device was at that moment.
+- Prove a capture came from the virtual device. Silence through BlackHole
+  measured at the digital floor (about -91 dB maximum level); a microphone
+  always shows an acoustic noise floor well above that.
+- A scripted Discard that misses its confirmation alert leaves the simulator
+  recording indefinitely. After discarding, check that the recording screen
+  is gone.
+
 ## iPad and iPhone Duo have no `TabBar` under XCUITest
 
 `app.tabBars.buttons["Name"]` finds nothing on iPad since iOS 18 (the floating
@@ -106,6 +179,11 @@ grep -E "Test run with [0-9]+ tests|Executed [0-9]+ tests" test.log | tail -3   
 grep -E "error: -\[" test.log | sed -E 's/.*\] : //; s/"[^"]*"/"…"/g' | sort | uniq -c | sort -rn   # failures by cause
 grep -ciE "crashed|EXC_BAD|SIGABRT|Fatal error" test.log                        # 0 means no crash
 ```
+
+Seen once: the first full unit run on a freshly created simulator failed a
+largest-text-size layout test that passed on every later run. Rerun a
+failure on a new simulator before blaming the code, and report it as
+first-run-only if it does not recur.
 
 Two lines on the iOS 27.1 runtime are noise, not defects: `CHHapticPattern ...
 hapticpatternlibrary.plist couldn't be opened` and `Class
@@ -140,6 +218,16 @@ nothing still exits 0, so assert on the totals line, not the exit code.
 - Distinguish a fresh-user launch from a returning-user launch. Read what a
   launch flag does: an innocently named UI-test flag may erase defaults and
   sign out on every launch. Omit resets when checking persistence.
+- Reinstalling an app keeps its Keychain items, so a "fresh install" can
+  still be signed in and skip onboarding. For a true first run, erase a
+  simulator you own or have the app clear its Keychain under a test flag.
+  On iOS 26 and later a Contacts grant is followed by a "How do you want to
+  share contacts?" sheet; script both.
+- `xcodebuild test-without-building` did not reinstall an app that was
+  already installed and running, so a run meant to measure a new build
+  measured the old one. Install the build explicitly
+  (`xcrun simctl install <udid> <path.app>`) and record its commit hash
+  (or `CFBundleVersion`) next to the result.
 
 ## Observe before diagnosing
 
@@ -161,6 +249,10 @@ visual results, and check both at layout-sensitive checkpoints.
 - Accessibility exposes full strings even when the rendered text ends in an
   ellipsis. A height check catches truncation for one font and layout; it
   is not universal proof of legibility. Inspect the screenshot.
+- For transitions, the status bar and iPad window controls, a settled
+  screenshot is not enough; see
+  [references/layout-and-transitions.md](references/layout-and-transitions.md)
+  for frame-by-frame capture and the layout traps found that way.
 
 Capture display evidence with the bundled helper, which screenshots every
 integrated display of a booted simulator plus toolchain and device metadata
@@ -212,13 +304,41 @@ passed, what evidence was saved and what remains untested. Treat beta
 observations as versioned evidence and recheck `simctl io help` and the
 current docs before carrying them into a new SDK.
 
+## Apple's skills that ship with Xcode
+
+Xcode 27 embeds Claude-format agent skills. `xcrun agent plugin path
+--plugin-format claude` writes them out and prints the directory
+(`~/Library/Developer/Xcode/CodingAssistant/ExportedPlugins/<build>/claude/skills/`,
+plugin name `xcode-integration`). The set changes with each Xcode build (the
+27.1 beta renamed `uikit-app-modernization` to `app-resizability`), so list
+the directory rather than trusting a remembered name. Load them alongside
+this skill; do not copy their text into a repo. On Xcode 27.1 (27A9275):
+
+- `device-interaction`: screenshots, hierarchy and taps on a device or
+  simulator through Xcode's MCP tools; its taps reached the Duo's outer
+  display when AXe's did not.
+- `app-resizability`: window resizing, safe areas, scene lifecycle and
+  iPhone Duo. Its `references/safe-area-task.md` covers corner-adapted
+  safe areas for iPad window controls.
+- `accessibility-voiceover-specialist`, `accessibility-dynamic-type-specialist`,
+  `accessibility-sufficient-contrast-specialist`: audits against the App
+  Store accessibility nutrition labels, before a VoiceOver, large-text or
+  contrast pass.
+- `modernize-tests`: moving XCTest suites to Swift Testing.
+- `swiftui-specialist` and `swiftui-whats-new-27`: when a QA failure traces
+  to SwiftUI behavior that changed in the 27 SDK.
+
+The others in that build (App Intents, document-based apps, C bounds safety,
+Xcode security settings, translation) are not simulator QA.
+
 ## Related
 
-- The Xcode 27 plugin's `device-interaction` skill drives a booted simulator by
-  screenshot and taps; it is iOS-only and complements this skill.
 - [references/duo.md](references/duo.md): multiple displays, poses, layout and
   lifecycle checks, a practical Duo matrix, and a Maestro symptom with its
   upstream reports.
 - [references/automated-flows.md](references/automated-flows.md): the runner,
   fixture and cleanup contract, assertions and evidence, and app test hooks.
+- [references/layout-and-transitions.md](references/layout-and-transitions.md):
+  frame-by-frame capture of short transitions, status-bar glyph colour, iPad
+  window controls and compact-window tests.
 - `agents/openai.yaml`: the same skill's display metadata for the codex CLI.

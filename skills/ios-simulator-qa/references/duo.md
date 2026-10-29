@@ -1,10 +1,12 @@
 # Duo-specific testing notes
 
-Observed with Xcode 27.1 beta build 27A9269, iOS 27.1 Simulator, and Maestro 2.10.0. Revalidate on later betas; these are not permanent API guarantees.
+Observed with Xcode 27.1 beta build 27A9269 and Xcode 27.1 (27A9275), the iOS 27.1 Simulator, AXe 1.8.0 and Maestro 2.10.0. Revalidate on later releases; these are not permanent API guarantees.
 
 ## Multiple displays and pose
 
-`xcrun simctl io "$SIM_UDID" enumerate` identifies connected screens and selectors for `screenshot --display=...`. On the tested simulator, outer and inner were screen IDs 1 and 3. Discover them each time; those numbers are observations, not configuration defaults. Enumeration's power state alone did not identify the visually active display.
+`xcrun simctl io "$SIM_UDID" enumerate` identifies connected screens and selectors for `screenshot --display=...`. On the 27.1 runtime `--display=1` was the outer display and `--display=3` the inner one (2853 by 2007 pixels in landscape, partially open). Discover them each time; those numbers are observations, not configuration defaults. Enumeration's power state alone did not identify the visually active display.
+
+AXe taps reported success but never reached the outer display (AXe `type` and `describe-ui` worked); drive the outer display with XCUITest or Xcode's `device-interaction` tools.
 
 `app.screenshot` sometimes captured the inactive outer display as black while the inner display showed a healthy app. Before diagnosing a black screen as a launch failure, capture each integrated display and check app/process logs. Conversely, a successful launch PID is not proof the process stayed alive.
 
@@ -27,7 +29,9 @@ The equivalent Objective-C implementation was exercised; adapt the Swift syntax 
 
 A full screenshot can be rotated relative to native pixel dimensions. XCTest frames are in points, screenshot dimensions may be pixels, and driver coordinates may use another orientation. Do not infer a scale-and-rotate tapping workaround without checking the coordinate spaces.
 
-The tested `simctl io` help exposed display power/geometry but no fold-pose operation. Display resizing or powering a screen is not proof of a fold. Use a supported simulator UI/tool to select the pose; if unavailable, ask the user to select it once and run the rest unattended. Check current help before concluding pose automation is unavailable.
+### Setting the pose
+
+The pose (closed, partially open, fully open) is set by hand in Device Hub (`/Applications/Xcode.app/Contents/Applications/DeviceHub.app`), with the buttons at the bottom of the device's window. It is not in Simulator.app's menus, and neither `simctl` nor XCTest has an API for it (Xcode 27.1). Device Hub may open showing a physical device; pick the simulator first. Display resizing or powering a screen with `simctl io` is not a fold, and `screenConfig power` on a Duo display crashed SpringBoard. So a pose is a precondition: ask the person to set it once in Device Hub, confirm it in a screenshot of every display, then run the rest unattended. A simulator reboot puts the pose back to closed (see SKILL.md, "A reboot resets more than the app"). Check current `simctl io help` and Device Hub on a new Xcode before concluding pose automation is still unavailable.
 
 ## XCUITest selectors on the Duo
 
@@ -47,6 +51,19 @@ Choose layouts using usable window geometry, traits, and safe/reserved regions. 
 Short height plus a software keyboard and error/help text is a particularly useful stress case. Confirm the keyboard is actually visible in the screenshot; text input success can occur with a hardware keyboard and does not establish keyboard-open layout coverage. Prefer scrolling and wrapped text to shrinking essential controls.
 
 Apple describes system vertical navigation controls for supported standard navigation/toolbar arrangements. Custom header stacks do not automatically become those controls. Moving actions into that bar is a product/navigation change, separate from a basic compatibility pass.
+
+## Apple's design guidance, as checks
+
+Summarised from Apple's tech talk [Design for iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111466/). What the talk says the system does is the expected behavior; each bullet ends with what to verify.
+
+- **Controls live in a side column.** On the closed outer display the tab bar, toolbars, back button, status bar and Dynamic Island sit in a column on the right; in a 50/50 split, an app on the left half gets that column on its left edge. Only the inner display in portrait keeps horizontal bars. Check that no app content or control sits under the column, and that the left-half split mirrors it.
+- **Two size classes, not per-pose layouts.** Apple's advice is to target compact width (outer) and regular width (inner) with layout margins and horizontal safe-area insets, and to avoid fixed widths, breakpoints and screen-specific metrics. Content aligned to the horizontal safe-area insets is offset from the column automatically. Check for clipped or off-centre content on the outer display; a fixed width or a device check is the usual cause.
+- **Full-width background, inset foreground.** A full-width background or header with inset scrolling content is an accepted pattern, as long as every interactive element stays in the inset area. Immersive screens that do not scroll may centre on the full display if nothing interactive lands under the column. Check every button's frame against the column, not just the visual balance.
+- **The column overflows.** App controls share the column with Live Activities and the status bar, and collapse into an overflow menu when crowded. Toolbar items too wide for the column (a text button, a segmented control) stay in the navigation bar. Check each action is still reachable, through the overflow menu if need be, with a Live Activity running.
+- **Sheets.** On the outer display a sheet's controls move to the side by default, unless the sheet disables its vertical bar; on the inner display sheets keep horizontal bars in both orientations. Check each sheet in both displays.
+- **The fold.** When partially folded, system components (sheets, alerts, menus, toolbar buttons and others) move out of the fold region on their own, and in portrait interactive elements move to the bottom half. Scrolling content may cross the fold. Custom controls get none of this. Check that no custom control rests in the fold when partially open; prefer system components.
+- **Inner display.** The talk calls a stretched iPhone layout the thing to avoid, and offers split views, a layout that reflows into columns, or a tab bar shown as a sidebar, with the same hierarchy as the outer display. Check that opening and closing the device keeps the user at the same place in the hierarchy.
+- **Never tie functionality to a pose.** An optional tabletop layout (media on top, controls on a stable base) is fine if it has the same controls and hierarchy as every other pose. Check that every action available in one pose is available in all of them.
 
 ## A practical matrix
 
@@ -76,6 +93,8 @@ Recheck current versions and issue status before proposing a workaround. Preserv
 
 - [Preparing your app for iPhone Duo](https://developer.apple.com/documentation/technologyoverviews/preparing-your-app-for-iphone-duo)
 - [Designing for iPhone Duo](https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo)
+- [Design for iPhone Duo](https://developer.apple.com/videos/play/tech-talks/111466/) (Apple tech talk 111466)
+- Xcode's `app-resizability` skill (see SKILL.md, "Apple's skills that ship with Xcode").
 - Installed SDK headers and `xcrun simctl io help` for the selected Xcode.
 
 If Apple's web reader exposes only a JavaScript shell, try Apple's linked Markdown or an accessible official/local copy; do not claim to have read content unavailable to the tool.
