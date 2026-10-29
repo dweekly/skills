@@ -46,7 +46,7 @@ A legacy AppDelegate-only app reproduced a launch crash on this beta with UIKit 
 
 For a scene migration, check one owner of window/root creation, URL and universal-link delivery on cold and warm launch, auth callback interception, notification navigation, foreground work, and background-only launches. Background URLSession completion delivery must still work without a foreground scene. Test an older supported OS too; removing full-screen compatibility also warrants iPad windowing QA.
 
-Choose layouts using usable window geometry, traits, and safe/reserved regions. The inner display is still an iPhone; an iPad-only branch can miss it. A wide layout may have a persistent sidebar and no menu button, so test navigation must accommodate both forms. Fold regions are internal occlusions, not merely edge safe-area insets.
+Choose layouts using usable window geometry, traits, and safe/reserved regions (iPhone apps resize on iOS 27 generally; see [layout-and-transitions.md](layout-and-transitions.md#resizable-iphone-apps-ios-27)). The inner display is still an iPhone; an iPad-only branch can miss it. A wide layout may have a persistent sidebar and no menu button, so test navigation must accommodate both forms. Fold regions are internal occlusions, not merely edge safe-area insets.
 
 Short height plus a software keyboard and error/help text is a particularly useful stress case. Confirm the keyboard is actually visible in the screenshot; text input success can occur with a hardware keyboard and does not establish keyboard-open layout coverage. Prefer scrolling and wrapped text to shrinking essential controls.
 

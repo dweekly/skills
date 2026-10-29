@@ -340,5 +340,5 @@ Xcode security settings, translation) are not simulator QA.
   fixture and cleanup contract, assertions and evidence, and app test hooks.
 - [references/layout-and-transitions.md](references/layout-and-transitions.md):
   frame-by-frame capture of short transitions, status-bar glyph colour, iPad
-  window controls and compact-window tests.
+  window controls, compact-window tests, and resizable iPhone apps on iOS 27.
 - `agents/openai.yaml`: the same skill's display metadata for the codex CLI.
