@@ -71,6 +71,8 @@ last in the recording, or is suppressed under the UI test's launch argument.
   frame 0 of the take. SIGINT stops and finalises the file.
 - Run the UI test that drives the flow (`xcodebuild test-without-building
   -only-testing:...`) while recording, then stop the recorder.
+  `test-without-building` did not reinstall an app already on the simulator,
+  so install the build you mean to film (`simctl install`) and note its hash.
 - One take or several. Several short takes (one per feature) are easier to
   retake; one walkthrough keeps continuity. A beat names its take.
 
@@ -115,7 +117,9 @@ live transcription) needs input while the take is recorded. Feed it synthetic
 speech through a virtual audio device such as BlackHole, selected as **the
 simulator's** input only (Simulator > I/O > Audio Input), and play a
 synthetic or licensed clip into it. Never change the Mac's system input,
-never record the room, never use a real person's voice without consent.
+never record the room, never use a real person's voice without consent. A
+simulator reboot resets its audio route, so check it before every take
+(ios-simulator-qa, "Simulator audio input and output").
 
 ## How the cut works
 

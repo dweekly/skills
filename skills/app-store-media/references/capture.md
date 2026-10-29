@@ -61,9 +61,12 @@ on a multi-display device).
 
 `xcrun simctl io "$UDID" enumerate` lists the screens and their selectors for
 `screenshot --display=...`; discover the IDs each time. Powering a display on
-or off with `screenConfig` is not a fold pose. If the pose (open or closed)
-cannot be chosen from the command line, ask the person to choose it once in the
-simulator's UI, then capture unattended.
+or off with `screenConfig` is not a fold pose. The pose is set by hand in
+Xcode's Device Hub (`Xcode.app/Contents/Applications/DeviceHub.app`), not in
+Simulator.app and not from the command line (Xcode 27.1), so ask the person to
+choose it once there, confirm it in a screenshot, then capture unattended. A
+simulator reboot puts it back to closed; see ios-simulator-qa's
+`references/duo.md`.
 
 Seen on the iOS 27.1 runtime (October 2026): the Duo device type needs the
 27.1 runtime or later (`xcodebuild -downloadPlatform iOS`); `screenConfig
