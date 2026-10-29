@@ -158,7 +158,8 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
   timeouts, and an item the layout makes unreachable (a pinned footer leaving the list less
   than a row tall) is an app finding, not a flaky test.
 - Restore `font_scale 1.0`, rotation and density when you finish, or the next agent's run on
-  that device inherits them.
+  that device inherits them. Check them before any flow that types: a sign-in flow on a phone
+  left in landscape failed because the keyboard covered the Continue button.
 
 ## Maestro
 
