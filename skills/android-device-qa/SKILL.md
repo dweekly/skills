@@ -249,6 +249,9 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
   (or use `adb shell -n`).
 - **zsh does not word-split unquoted variables.** `set -- $bounds` or `for x in $list` gets one
   word in zsh. Run such scripts with `bash`, or split explicitly (`${=var}`).
+- **A waiter built on `pgrep -f <pattern>` waits forever** when the pattern appears in the
+  waiter's own command line (`until ! pgrep -f "matrix/run1"; do sleep 10; done` matches
+  itself). Record the PID when you start the job and wait on it: `while kill -0 $pid; do ...`.
 - `uiautomator dump` writes to the device; read it back in the same command
   (`adb shell 'uiautomator dump /sdcard/u.xml >/dev/null && cat /sdcard/u.xml'`) so two
   parallel runs on one device do not read each other's file, and use a path per run.
