@@ -1,0 +1,19 @@
+#!/bin/sh
+# Set or read an iPhone Duo simulator's fold pose: duo-pose <UDID> get|closed|partial|open
+# Compiles duo_pose.swift once per source and compiler version into a cache, then runs it.
+# How it works, exit codes and credits: the header of duo_pose.swift.
+set -eu
+here=$(cd "$(dirname "$0")" && pwd)
+src="$here/duo_pose.swift"
+cache="${XDG_CACHE_HOME:-$HOME/Library/Caches}/ios-simulator-qa"
+key=$( { cat "$src"; xcrun swiftc --version 2>&1; } | shasum | cut -c1-12)
+bin="$cache/duo-pose-$key"
+if [ ! -x "$bin" ]; then
+  mkdir -p "$cache"
+  xcrun swiftc -O "$src" -o "$bin.tmp.$$" || { echo "duo-pose: could not compile $src" >&2; exit 3; }
+  mv "$bin.tmp.$$" "$bin"
+  for old in "$cache"/duo-pose-*; do  # builds of older sources or compilers
+    [ "$old" = "$bin" ] || rm -f "$old"
+  done
+fi
+exec "$bin" "$@"
