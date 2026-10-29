@@ -90,6 +90,11 @@ When several agents or a CI runner share one Mac (seen October 2026, Xcode 27.1)
 - **Create your own simulators** with a name prefix that says whose they are
   (`xcrun simctl create <prefix>-<purpose> <devicetype> <runtime>`), pin
   their UDIDs, and delete only those at the end.
+- **Shut a simulator down as soon as you are done with it**
+  (`xcrun simctl shutdown <udid>`). Each booted simulator holds gigabytes of
+  memory, and a night of parallel QA left 17 booted on one Mac. Shut down
+  ones you only borrowed, and delete ones you created. A posed Duo is the
+  one exception while a capture still needs its pose, since a boot resets it.
 - A Claude Code `PreToolUse` hook can deny the mechanical half: quitting
   Simulator.app, `killall` and pattern `pkill`, `simctl ... all` and any
   `simctl` aimed at `booted`, and changes to the Mac's audio defaults. The
@@ -141,6 +146,14 @@ input or output devices.
   several simulators, though one agent saw it set both; the `'inpt'` and
   `'outp'` constants did nothing. Set scope `1` and `'glob'`, then read both
   UIDs back.
+- On the iPhone Duo (iOS 27.1 runtime) the private-API route did not stick:
+  `get` read the system default again once the routing tool exited, and a
+  process holding the routes open did not carry the device's audio either.
+  What worked was the Simulator app's per-device menus on that simulator's
+  window, I/O > Audio Output and I/O > Audio Input > BlackHole 2ch, then
+  `get` read `BlackHole2ch_UID`. Prove it before anything plays: play a
+  short silent file in the simulator and watch BlackHole's "device is
+  running" flag go to 1. Set both menus back to "System" afterwards.
 - To undo, route to `__sim__hostUseSystemDefaultDeviceUID`. An empty UID
   pinned the simulator to whatever the Mac's device was at that moment.
 - Prove a capture came from the virtual device. Silence through BlackHole
