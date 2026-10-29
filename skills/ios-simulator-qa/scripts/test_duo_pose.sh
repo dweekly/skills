@@ -20,6 +20,40 @@ cleanup() {
 }
 trap cleanup EXIT
 
+posterboard() { xcrun simctl spawn "$udid" launchctl list 2>/dev/null | awk '$3 == "com.apple.PosterBoard" { print $1, $2 }'; }
+
+# Given PosterBoard's `launchctl list` reading ("PID LASTEXIT", PID "-" when not running) before and
+# after the poses, and how many times launchd_sim spawned it in between, print what looks like a
+# crash, or nothing. A crash need not have been followed by a respawn yet.
+posterboard_problem() {
+  local before=$1 after=$2 spawns=$3
+  local b_pid=${before%% *} b_exit=${before#* } a_pid=${after%% *} a_exit=${after#* }
+  if [ -z "$after" ]; then
+    [ -n "$before" ] && echo "PosterBoard is no longer listed by launchctl"
+    return 0
+  fi
+  if [ -n "$before" ] && [ "$b_pid" != "-" ] && [ "$a_pid" != "$b_pid" ]; then
+    echo "the PosterBoard that was running (PID $b_pid) is gone (now PID $a_pid, last exit $a_exit)"
+  elif [ "$a_exit" != "$b_exit" ] && [ "$a_exit" != "0" ]; then
+    echo "its last exit status changed to $a_exit"
+  elif [ "$spawns" -gt 1 ] && [ "$a_exit" != "0" ]; then
+    echo "it was spawned $spawns times, last exit status $a_exit"
+  fi
+  return 0
+}
+
+# The verdict above is the only thing between a PosterBoard crash and a PASS, so check it on fixed
+# readings first (no device needed). Format: before|after|spawns|expect (crash or ok).
+for case in "101 0|- -5|0|crash" "101 0|101 0|0|ok" "50448 -5|50448 -5|0|ok" "101 0|202 -5|1|crash" \
+            "101 0|202 0|1|crash" "- -5|303 -5|1|ok" "- 0|- -5|0|crash" "101 0||0|crash" "||0|ok"; do
+  IFS='|' read -r b a n want <<<"$case"
+  got=ok; [ -n "$(posterboard_problem "$b" "$a" "$n")" ] && got=crash
+  if [ "$got" != "$want" ]; then
+    echo "FAIL self-check: PosterBoard verdict for before='$b' after='$a' spawns=$n is $got, expected $want" >&2
+    exit 3
+  fi
+done
+
 if [ $# -ge 1 ]; then
   udid=$1
 else
@@ -38,7 +72,6 @@ print(rts[-1]["identifier"] if rts else "")')
   xcrun simctl bootstatus "$udid" -b >/dev/null || exit 3
 fi
 
-posterboard() { xcrun simctl spawn "$udid" launchctl list 2>/dev/null | awk '$3 == "com.apple.PosterBoard" { print $1, $2 }'; }
 start=$(date "+%Y-%m-%d %H:%M:%S")
 before=$(posterboard)
 
@@ -64,12 +97,12 @@ after=$(posterboard)
 spawns=$(xcrun simctl spawn "$udid" log show --start "$start" --style compact \
   --predicate 'process == "launchd_sim" AND eventMessage CONTAINS "Successfully spawned PosterBoard"' 2>/dev/null \
   | grep -c "Successfully spawned PosterBoard")
-last_exit=${after#* }
-if [ "${spawns:-0}" -gt 0 ] && [ "$last_exit" != "0" ]; then
+problem=$(posterboard_problem "$before" "$after" "${spawns:-0}")
+if [ -n "$problem" ]; then
   failures=$((failures + 1))
-  echo "FAIL PosterBoard respawned $spawns time(s) during the test, last exit status $last_exit (PID/status before: ${before:-none}, after: ${after:-none}). Crash reports: ~/Library/Logs/DiagnosticReports/PosterBoard-*.ips naming $udid (written up to a minute late)."
+  echo "FAIL PosterBoard: $problem (PID/last exit before: ${before:-none}, after: ${after:-none}; spawns: ${spawns:-0}). Crash reports: ~/Library/Logs/DiagnosticReports/PosterBoard-*.ips naming $udid (written up to a minute late)."
 else
-  echo "PASS PosterBoard stable (PID/last exit before: ${before:-none}, after: ${after:-none}; respawns: ${spawns:-0})"
+  echo "PASS PosterBoard stable (PID/last exit before: ${before:-none}, after: ${after:-none}; spawns: ${spawns:-0})"
 fi
 
 if [ $failures -eq 0 ]; then echo "duo-pose self-test passed"; else echo "duo-pose self-test FAILED ($failures)"; fi

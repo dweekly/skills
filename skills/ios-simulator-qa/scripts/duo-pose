@@ -10,10 +10,11 @@ key=$( { cat "$src"; xcrun swiftc --version 2>&1; } | shasum | cut -c1-12)
 bin="$cache/duo-pose-$key"
 if [ ! -x "$bin" ]; then
   mkdir -p "$cache"
-  xcrun swiftc -O "$src" -o "$bin.tmp.$$" || { echo "duo-pose: could not compile $src" >&2; exit 3; }
-  mv "$bin.tmp.$$" "$bin"
-  for old in "$cache"/duo-pose-*; do  # builds of older sources or compilers
-    [ "$old" = "$bin" ] || rm -f "$old"
-  done
+  tmp="$bin.tmp.$$"
+  xcrun swiftc -O "$src" -o "$tmp" || { rm -f "$tmp"; echo "duo-pose: could not compile $src" >&2; exit 3; }
+  # Concurrent first runs each build their own file and rename it into place; the last one wins
+  # and the result is the same. Old builds are never pruned here, because another invocation may
+  # be using one; delete the cache directory by hand to reclaim the space.
+  mv -f "$tmp" "$bin" || [ -x "$bin" ] || { echo "duo-pose: could not publish $bin" >&2; exit 3; }
 fi
 exec "$bin" "$@"
