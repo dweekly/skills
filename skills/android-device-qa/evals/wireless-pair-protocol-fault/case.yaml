@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: wireless-pair-protocol-fault
+expected_outcome: |
+  Identifies that on macOS the daemonized adb server has lost Local Network access (the terminal can
+  reach the phone, the detached server cannot), gives the attached-server fix, a non-adb way to find the
+  pairing service, and the follow-on connect step.
