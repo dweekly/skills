@@ -90,6 +90,10 @@ When several agents or a CI runner share one Mac (seen October 2026, Xcode 27.1)
 - **Create your own simulators** with a name prefix that says whose they are
   (`xcrun simctl create <prefix>-<purpose> <devicetype> <runtime>`), pin
   their UDIDs, and delete only those at the end.
+- **Keep your simulator's UDID in a file only you write** (a path that
+  includes your task or agent name), or hard-code it in your script. Two
+  agents saving it to the same generic scratch file meant one agent's
+  launch and terminate commands hit another agent's simulator.
 - **Shut a simulator down as soon as you are done with it**
   (`xcrun simctl shutdown <udid>`). Each booted simulator holds gigabytes of
   memory, and a night of parallel QA left 17 booted on one Mac. Shut down
