@@ -151,12 +151,17 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
 - **Rotation resets behind you.** Force-stopping the app brings the launcher forward, and the
   phone emulators then went back to rotation 0. Set the orientation inside the flow after each
   launch (Maestro `setOrientation`), and check every screenshot's shape: a "landscape" capture
-  that is taller than wide is a failed cell, not a result.
+  that is taller than wide is a failed cell, not a result. One emulator can keep doing this
+  while the others, on the same build and flows, never do: re-run only that device's failed
+  cells before suspecting the app.
 - "Portrait" and "landscape" are shapes, not rotation numbers: a tablet held upright may be
   rotation 1.
 - A landscape phone at 2x text shows a line or two per swipe. Scrolling to a far item needs long
   timeouts, and an item the layout makes unreachable (a pinned footer leaving the list less
   than a row tall) is an app finding, not a flaky test.
+- Compare a run against a baseline only on the devices and configurations both cover. A run
+  that adds a font scale or a device has nothing to compare those cells with; check them on
+  their own, and compare the shared subset (link those cells into a separate directory).
 - Restore `font_scale 1.0`, rotation and density when you finish, or the next agent's run on
   that device inherits them. Check them before any flow that types: a sign-in flow on a phone
   left in landscape failed because the keyboard covered the Continue button.
@@ -198,7 +203,9 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
   ffmpeg -i launch.mp4 -vf "select='gt(scene,0.05)',showinfo" -f null - 2>&1 | grep pts_time
   ```
 
-  Take the median of several cold starts on the same device rather than one run.
+  Take the median of several cold starts on the same device rather than one run. On an
+  emulator, `am start -W` now and then returns with no `TotalTime` line although the launch
+  worked; retry that one launch instead of aborting a long comparison.
 - **`screenrecord` encodes a frame only when the display changes.** A static screen yields a
   one-frame file, so a tiny recording is itself proof of a quiet screen; counting frames that
   differ from their predecessor quantifies flicker when it is not quiet.
