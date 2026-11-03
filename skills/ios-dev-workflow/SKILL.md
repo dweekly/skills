@@ -1,6 +1,6 @@
 ---
 name: ios-dev-workflow
-description: "How to run iOS and iPadOS app work end to end with an owner and several agents, so it lands fast without rework. Covers setting the bar for what gets fixed before anything is dispatched, settling every visual decision in one sitting with real screenshots and a tradeoff table, labelling where evidence comes from, sizing agent jobs (one bug, about an hour, one checkpoint), sharing builds and queueing simulators, landing order and standing landing authority, conflict-prone tracker files, CI simulators that hide state-dependent tests, release-candidate gates, physical-device prerequisites, and platform behaviors measured on iOS 26 and Xcode 27. Use for any iOS or iPadOS development work: a bug fix, a feature, a fix batch, a release candidate, a QA pass, or planning one. Pair with ios-simulator-qa for the mechanics of driving simulators."
+description: "How to run iOS and iPadOS app work end to end with an owner and several agents, so it lands fast without rework. Covers reading Apple's primary sources first (the skills and guides bundled with Xcode, SDK headers and Swift interfaces, official documentation), learning APIs hands-on with small instrumented probe apps whose results you look at, not only unit tests, setting the bar for what gets fixed before anything is dispatched, settling every visual decision in one sitting with real screenshots and a tradeoff table, labelling where evidence comes from, sizing agent jobs (one bug, about an hour, one checkpoint), sharing builds and queueing simulators, landing order and standing landing authority, conflict-prone tracker files, CI simulators that hide state-dependent tests, release-candidate gates, physical-device prerequisites, and platform behaviors measured on iOS 26 and Xcode 27. Use for any iOS or iPadOS development work: a bug fix, a feature, a fix batch, a release candidate, a QA pass, or planning one. Pair with ios-simulator-qa for the mechanics of driving simulators."
 license: MIT
 ---
 
@@ -14,6 +14,73 @@ code. Each section below is a rule plus the failure that taught it.
 For driving simulators (UDIDs, audio routing, frame-by-frame capture, XCUITest), use the
 ios-simulator-qa skill. Platform behaviors measured during the sprint are in
 [references/platform-findings.md](references/platform-findings.md).
+
+## 0. Go to the source, then try it
+
+Before designing around an API, asserting how UIKit or SwiftUI behaves, or explaining a
+defect, read the primary sources on this machine, in this order. A remembered or
+summarised API is the usual root of a confident wrong answer.
+
+1. **Apple's skills that ship with Xcode.** `xcrun agent plugin path --plugin-format claude`
+   writes them out and prints the directory
+   (`~/Library/Developer/Xcode/CodingAssistant/ExportedPlugins/<build>/claude/`; the skills
+   are its subfolders). On Xcode 27.2 (27B52) they include `swiftui-specialist`,
+   `swiftui-whats-new-27`, `app-resizability`, `accessibility-dynamic-type-specialist`,
+   `accessibility-sufficient-contrast-specialist`, `accessibility-voiceover-specialist`,
+   `device-interaction`, `modernize-tests`, `xctrace`, `app-intents-specialist` and
+   `translation`. The set changes with each Xcode build, so list the directory rather than
+   trusting a name, and load the ones that match the task. String-catalog skills live
+   separately in `Xcode.app/Contents/PlugIns/IDEXCStringsSupport.framework/Resources/Skills/`.
+2. **Xcode's bundled guides.** Markdown that Apple ships for its coding assistant:
+   `Xcode.app/Contents/PlugIns/IDEIntelligenceChat.framework/Resources/AdditionalDocumentation/*.md`
+   (20 on Xcode 27.2: Liquid Glass for UIKit and SwiftUI, the new SwiftUI toolbar, Swift
+   concurrency updates, StoreKit, WidgetKit and more). `ls` it; read the matching file whole.
+3. **The SDK's headers and Swift interfaces**, the ground truth for what the SDK declares,
+   its availability and Apple's doc comments:
+   ```sh
+   SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+   grep -rn "viewIsAppearing" "$SDK/System/Library/Frameworks/UIKit.framework/Headers/"
+   ls "$SDK/System/Library/Frameworks/SwiftUI.framework/Modules/SwiftUI.swiftmodule/"*.swiftinterface
+   ```
+   Objective-C frameworks: `<F>.framework/Headers/*.h`. Swift frameworks:
+   `<F>.framework/Modules/<F>.swiftmodule/*.swiftinterface`. Check the SDK version the app
+   actually builds with (`xcrun --sdk iphoneos --show-sdk-version`).
+4. **Apple's official documentation**: `developer.apple.com/documentation/<framework>`, the
+   Human Interface Guidelines, Xcode and iOS release notes, and WWDC session pages and
+   transcripts. With Xcode open on the workspace, Xcode's MCP server offers a
+   `DocumentationSearch` tool.
+5. **Third-party SDKs**: read their source where you have it (Swift Package checkouts under
+   `DerivedData/<project>/SourcePackages/checkouts/`, `Pods/`) and the vendor's docs and
+   issue tracker. For binary-only SDKs, read the shipped headers and observe behavior with
+   the SDK's debug logging (for Firebase, `-FIRDebugEnabled`).
+
+Say which source a claim rests on: documented, read in a header or interface, measured
+(with device, OS and build), or inferred. [references/platform-findings.md](references/platform-findings.md)
+uses those labels.
+
+### Then learn it by building
+
+Documentation says what an API is meant to do; only running it shows what it does on this
+OS, in this window, under this load. Whenever behavior matters (presentation and dismissal,
+status-bar style, safe areas, Dynamic Type, keyboard, permissions, analytics callbacks),
+learn it hands-on before building on it:
+
+- **Build a small probe app or stub** that does only the thing in question: one view
+  controller presenting a sheet over a popover, one SwiftUI view measured in a hosting
+  controller, one permission request during a transition. Keep it out of the product repo
+  (or in a clearly named scratch target) and record what it showed.
+- **Instrument it end to end.** Log the callbacks in order with timestamps (`os_log` or
+  `NSLog` with a tag), give every element an accessibility identifier, and drive it with
+  XCUITest or a simulator driver so the same sequence reruns on demand and on the next OS.
+- **Look at the result.** Capture screenshots and every-frame video across the transition
+  (ios-simulator-qa covers the mechanics), open them, and judge them by eye as well as by
+  measurement. A passing unit test proves the logic you wrote, not what the person sees.
+- **Then write the unit test** that pins the behavior you observed, and see it fail without
+  your change. Keep the UI-level check too: unit tests and test stand-ins missed what only
+  the running app showed (a card drawn over the timeline after a text-size change, a status
+  line jumping half a line, a sign-in screen covering a test page).
+- **Promote what you learn** into the platform findings with the OS, device and build it
+  was measured on.
 
 ## 1. Set the bar before dispatching anything
 
