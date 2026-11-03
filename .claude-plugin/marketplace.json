@@ -1,8 +1,6 @@
 {
   "name": "dweekly-skills",
-  "owner": {
-    "name": "David E. Weekly"
-  },
+  "owner": { "name": "David E. Weekly" },
   "metadata": {
     "description": "Agent skills by David E. Weekly, earned on real projects",
     "version": "0.1.0"
@@ -13,45 +11,35 @@
       "description": "Nonpartisan voting coach: research your actual ballot, test it against your own written beliefs, and keep a reusable beliefs file",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./skills/ballot-coach"
-      ]
+      "skills": ["./skills/ballot-coach"]
     },
     {
       "name": "a2p-campaign",
       "description": "Register US A2P 10DLC SMS campaigns and WhatsApp senders on Twilio that pass carrier review the first time",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./skills/a2p-campaign"
-      ]
+      "skills": ["./skills/a2p-campaign"]
     },
     {
       "name": "ios-simulator-qa",
       "description": "Build, drive and visually verify iPhone and iPad apps on the Simulator, and turn a verified walkthrough into an unattended test",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./skills/ios-simulator-qa"
-      ]
+      "skills": ["./skills/ios-simulator-qa"]
     },
     {
       "name": "app-store-media",
       "description": "Produce App Store screenshots from simulator captures at every accepted size, framed with brand captions, validated, and ready to upload",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./skills/app-store-media"
-      ]
+      "skills": ["./skills/app-store-media"]
     },
     {
       "name": "ios-dev-workflow",
       "description": "Run iOS and iPadOS work with an owner and several agents: set the bar first, settle visual decisions in one sitting, size agent jobs small, land in the right order, keep CI honest",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./skills/ios-dev-workflow"
-      ]
+      "skills": ["./skills/ios-dev-workflow"]
     }
   ]
 }
