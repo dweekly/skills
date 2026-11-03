@@ -1,0 +1,4 @@
+interface:
+  display_name: "iOS Development Workflow"
+  short_description: "Run iOS work with an owner and several agents without rework"
+  default_prompt: "Use $ios-dev-workflow to plan this iOS fix batch: set the bar, collect the owner's decisions in one page, and size the agent jobs."
