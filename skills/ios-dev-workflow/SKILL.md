@@ -212,6 +212,14 @@ and polled the simulator count by hand.
   evidence path. A gate that could not run is a gap, written down as one.
 - "Known issue", "pre-existing", "flaky" and "simulator problem" are never a disposition.
   Find the cause, fix it, or bring the owner a decision with the bar from section 1.
+- Before asking the owner to upload, give them one review page they can read on a phone:
+  a gates table with result chips, each open question with its evidence and a
+  recommendation, contact sheets of every walkthrough screen (each device, default and
+  largest text), before-and-after stills for each fix in the build, the upload steps, and
+  what is deferred. Screenshot the page at phone and desktop width before sending it. An
+  owner who can see every screen in one place decides in minutes and finds the cosmetic
+  notes the gates miss. For a gesture that is cancelled, show a mid-gesture frame: the
+  settled still is identical to the starting one.
 - Uploading to App Store Connect is the owner's step unless they say otherwise.
 
 ## 9. Physical devices
