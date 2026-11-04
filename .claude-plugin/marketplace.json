@@ -35,6 +35,13 @@
       "skills": ["./skills/app-store-media"]
     },
     {
+      "name": "ios-dev-workflow",
+      "description": "Run iOS and iPadOS work with an owner and several agents: set the bar first, settle visual decisions in one sitting, size agent jobs small, land in the right order, keep CI honest",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/ios-dev-workflow"]
+    },
+    {
       "name": "android-device-qa",
       "description": "Build, drive and visually verify Android apps on emulators and phones across devices, font sizes and orientations, and turn a verified walkthrough into an unattended flow",
       "source": "./",
