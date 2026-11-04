@@ -76,7 +76,8 @@ learn it hands-on before building on it:
   (ios-simulator-qa covers the mechanics), open them, and judge them by eye as well as by
   measurement. A passing unit test proves the logic you wrote, not what the person sees.
 - **Then write the unit test** that pins the behavior you observed, and see it fail without
-  your change. Keep the UI-level check too: unit tests and test stand-ins missed what only
+  your change. Give the end-to-end check a negative control too: run the same take against
+  the previous build and see it fail, so a pass means the fix and not a lucky driver. Keep the UI-level check too: unit tests and test stand-ins missed what only
   the running app showed (a card drawn over the timeline after a text-size change, a status
   line jumping half a line, a sign-in screen covering a test page).
 - **Promote what you learn** into the platform findings with the OS, device and build it
@@ -168,6 +169,10 @@ and were fragile: one expired login stopped four agents mid-run.
   PR pays a full re-run. Either keep tracker edits out of fix PRs and land them in one
   docs PR, or land in quick succession with a scripted "merge base, resolve append
   conflicts by keeping both, re-review, wait for CI, preflight" loop.
+- **Wait for the exact head's CI.** After pushing a merge or fix, wait for the CI run whose
+  commit is the new head, not "the checks on the PR": those can still show the previous head's
+  result before the new run registers. Then audit before release: every landed PR's final head
+  has its own passing run.
 - **Reserve IDs** (bug numbers) centrally when several agents file at once, or tell each
   agent to check open PRs for claimed IDs. Two agents claimed the same three IDs.
 - **Merge commits into the release branch** from the landed develop heads only, and check
