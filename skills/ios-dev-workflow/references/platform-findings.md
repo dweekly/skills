@@ -91,7 +91,8 @@ See also ios-simulator-qa's layout-and-transitions reference.
   `code = ""` left the "already submitted" marker set, so a pasted replacement did nothing.
   Reset derived state wherever the value is written directly, and test a whole-value
   replacement (paste, AutoFill), not only typing. Found by review, confirmed with a paste take
-  (`xcrun simctl pbcopy` then Cmd-V via `axe key-combo --modifiers 227 --key 25`).
+  (`printf 123456 | xcrun simctl pbcopy <udid>`, then Cmd-V with
+  `axe key-combo --modifiers 227 --key 25 --udid <udid>` while the field has focus).
 
 ## Labels
 
