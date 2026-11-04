@@ -63,7 +63,8 @@ serials (`ANDROID_SERIAL` or `adb -s`), kill only the PIDs you started, and neve
 (`sensor=1` is the microphone; `state_type=1` blocked, `2` not), and the app then records
 silence. Android asks "Unblock device microphone?" when a recording starts and again on every
 resume after a pause: answer Cancel, never Unblock, and handle the prompt in the flow
-(`runFlow: when: visible:`). Run `disable` when done so the owner gets the phone back as it was.
+(`runFlow: when: visible:`). Read the state before you block it and put back exactly that when
+done: run `disable` only if it was not blocked before (an owner may keep it blocked on purpose).
 
 Pair once per phone (Developer options, Wireless debugging, "Pair device with pairing code"),
 then connect. Three things go wrong, in this order:
@@ -175,9 +176,11 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
 - Compare a run against a baseline only on the devices and configurations both cover. A run
   that adds a font scale or a device has nothing to compare those cells with; check them on
   their own, and compare the shared subset (link those cells into a separate directory).
-- Restore `font_scale 1.0`, rotation and density when you finish, or the next agent's run on
-  that device inherits them; a matrix run you stop part-way leaves them at its last cell. Check them before any flow that types: a sign-in flow on a phone
-  left in landscape failed because the keyboard covered the Continue button.
+- Record the device's font scale, rotation settings and density before a matrix and put back
+  those values when you finish (not a fixed `1.0` and portrait: the owner may use other
+  settings), or the next agent's run inherits the last cell; a run stopped part-way leaves
+  them there too. Check them before any flow that types: a sign-in flow on a phone left in
+  landscape failed because the keyboard covered the Continue button.
 
 ## Maestro
 
