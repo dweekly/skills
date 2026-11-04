@@ -79,6 +79,21 @@ See also ios-simulator-qa's layout-and-transitions reference.
   0 pt. Pass the data to the view directly when you measure it in the same run-loop turn.
   Measured, iOS 26.5.
 
+## Text input in SwiftUI
+
+- **`onChange(of:)` is not a reliable place to act on text-field input.** On a code field bound
+  to `@State`, SwiftUI sometimes did not call `onChange` for the keystroke that completed a
+  six-digit code, although the field and the state both held all six digits; the next
+  keystroke delivered it late. Seen 2 of 13 entries with probe logging, iOS 26.5 simulator,
+  typing through AXe. Act in the field's binding setter (`Binding(get:set:)`), which sees every
+  edit, and keep `onChange` for display clean-up only. Measured.
+- **Writing the state directly bypasses that setter.** An alert that cleared the field with
+  `code = ""` left the "already submitted" marker set, so a pasted replacement did nothing.
+  Reset derived state wherever the value is written directly, and test a whole-value
+  replacement (paste, AutoFill), not only typing. Found by review, confirmed with a paste take
+  (`printf 123456 | xcrun simctl pbcopy <udid>`, then Cmd-V with
+  `axe key-combo --modifiers 227 --key 25 --udid <udid>` while the field has focus).
+
 ## Labels
 
 - **A one-line `UILabel` is centred vertically in a taller frame.** A status label whose
