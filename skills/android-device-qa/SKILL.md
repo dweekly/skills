@@ -58,6 +58,13 @@ serials (`ANDROID_SERIAL` or `adb -s`), kill only the PIDs you started, and neve
 
 ## Physical phones over wireless adb on macOS
 
+**Block a shared phone's microphone before any recording test**, so the room is not recorded:
+`adb shell cmd sensor_privacy enable 0 microphone`. `dumpsys sensor_privacy` shows the state
+(`sensor=1` is the microphone; `state_type=1` blocked, `2` not), and the app then records
+silence. Android asks "Unblock device microphone?" when a recording starts and again on every
+resume after a pause: answer Cancel, never Unblock, and handle the prompt in the flow
+(`runFlow: when: visible:`). Run `disable` when done so the owner gets the phone back as it was.
+
 Pair once per phone (Developer options, Wireless debugging, "Pair device with pairing code"),
 then connect. Three things go wrong, in this order:
 
@@ -110,6 +117,12 @@ show up first.
 - Coordinates from one device, scale or orientation are wrong on the next. If a flow must fall
   back to coordinates, read them from a dump on the same run, and remove the fallback once the
   control has a name.
+- **Legacy Views inside Compose report unclipped bounds.** Items of a `LazyColumn` hosted in
+  `AndroidView` (an XML row in a Compose list) keep their full bounds in the dump even where a
+  top bar covers them. An item half under the bar counts as fully visible, Maestro "finds" it,
+  and its tap lands on the bar. Compose nodes report clipped bounds. Reach a screen through a
+  Compose path when there is one, and remember that `below:`/`above:` anchors need the anchor
+  itself on screen: at large text the anchor scrolls away before the target appears.
 
 ## Accessibility checks you can automate, and the one you cannot
 
@@ -163,12 +176,19 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
   that adds a font scale or a device has nothing to compare those cells with; check them on
   their own, and compare the shared subset (link those cells into a separate directory).
 - Restore `font_scale 1.0`, rotation and density when you finish, or the next agent's run on
-  that device inherits them. Check them before any flow that types: a sign-in flow on a phone
+  that device inherits them; a matrix run you stop part-way leaves them at its last cell. Check them before any flow that types: a sign-in flow on a phone
   left in landscape failed because the keyboard covered the Continue button.
 
 ## Maestro
 
 - `maestro --device <serial> test flow.yaml`. Run one Maestro per device, in parallel.
+- **Run flows from the checkout of the branch under test.** A matrix script that reads flows
+  from its own directory runs whatever that checkout holds: launched from a primary checkout
+  on an old commit, three PRs' matrix runs passed on flows those PRs had already changed.
+  Print the flows' commit at the start of every run.
+- **A freshly booted emulator drops Maestro's first runs** ("device offline",
+  `DeviceServerDiedException`) while Maestro installs its driver, though `adb devices` shows the
+  device. Rerun the flow; it settles within a couple of tries.
 - **In 2.10, a flow's `env:` block beats `-e` on the command line.** Declare no defaults in the
   flow for values the script passes.
 - **Something floating takes the tap.** A mini player, snackbar or bottom bar over the target
@@ -215,6 +235,13 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
   microphone-on time to prove a pause left no gap or extra audio.
 - **Footprint from a release build.** Debug APKs carry no shrinking and are not comparable.
   Build both sides of a comparison clean, from the same toolchain.
+- **Font scaling is not linear on Android 14 and later.** 200% text does not double a label's
+  width (a "Replay" label needed 270 dp at 1.0x and 341 dp at 2.0x, not 540). Measure text with
+  the platform's text measurer at the scale under test rather than multiplying.
+- **Text under `clearAndSetSemantics` is invisible to Compose tests**, so "the label is not a
+  bare 15" cannot be asserted on the text. Assert on layout instead (the laid-out button's
+  width against the measured widest word), and prove the assertion with a negative control:
+  break the code and watch it fail.
 
 ## Screenshots for people and stores
 
@@ -233,6 +260,11 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
 - **`adb exec-out screencap -p` writes a PNG with an alpha channel.** Google Play accepts JPEG
   or 24-bit PNG without alpha; flatten before upload (`magick in.png -alpha off out.png`).
 - Use `exec-out` for binary output; it passes bytes through with no terminal in between.
+- **A screen that changes on its own needs an immediate capture.** A recording screen swaps
+  "Listening" for a quiet-sound warning within seconds; take `adb exec-out screencap` the
+  moment the screen appears instead of through a later flow step.
+- **Demo mode does not hide the privacy indicator.** While the microphone is in use, the green
+  indicator stays in the status bar of any recording-screen capture.
 
 ## Installing and reaching app data
 
@@ -256,6 +288,8 @@ adb shell wm size 1080x2400                       # emulate another size; `wm si
   (or use `adb shell -n`).
 - **zsh does not word-split unquoted variables.** `set -- $bounds` or `for x in $list` gets one
   word in zsh. Run such scripts with `bash`, or split explicitly (`${=var}`).
+  The same applies to a command kept in a variable: `E="adb -s X shell"; $E ls` fails with
+  "command not found". Use a function (`e() { adb -s X shell "$@"; }`).
 - **`./gradlew ... | tail; echo $?` reports tail's exit, not Gradle's.** A build whose output
   was filtered through a pipe "passed" while the APK on disk was half an hour old, and the next
   device check ran the old code. Check the APK's timestamp, or capture Gradle's status directly
