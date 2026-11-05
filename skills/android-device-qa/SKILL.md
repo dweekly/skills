@@ -223,8 +223,8 @@ adb shell wm size 1080x2400                       # emulate another size
   record the launch and find the frame where the content appears:
 
   ```sh
-  adb shell screenrecord --time-limit 10 /sdcard/launch.mp4 &
-  sleep 1; adb shell am start -n <pkg>/<activity>; wait
+  adb shell screenrecord --time-limit 10 /sdcard/launch.mp4 & rec=$!
+  sleep 1; adb shell am start -n <pkg>/<activity>; wait "$rec"   # this job only, not every one
   adb pull /sdcard/launch.mp4
   ffmpeg -i launch.mp4 -vf "select='gt(scene,0.05)',showinfo" -f null - 2>&1 | grep pts_time
   ```
