@@ -40,6 +40,13 @@
       "source": "./",
       "strict": false,
       "skills": ["./skills/ios-dev-workflow"]
+    },
+    {
+      "name": "android-device-qa",
+      "description": "Build, drive and visually verify Android apps on emulators and phones across devices, font sizes and orientations, and turn a verified walkthrough into an unattended flow",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/android-device-qa"]
     }
   ]
 }

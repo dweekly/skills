@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: overnight-a11y-audit-plan
+expected_outcome: |
+  A concrete plan built on hierarchy dumps and screenshots across devices, font scales and orientations,
+  with label and 48 dp target checks that avoid known false positives, honest about what the dumps
+  cannot show and stating that a TalkBack pass needs a person.

@@ -12,6 +12,7 @@ One step (Claude Code 2.1.275 or later):
 /plugin install ios-simulator-qa --marketplace dweekly/skills
 /plugin install app-store-media --marketplace dweekly/skills
 /plugin install ios-dev-workflow --marketplace dweekly/skills
+/plugin install android-device-qa --marketplace dweekly/skills
 ```
 
 Or add the marketplace once, then install by name: `/plugin marketplace add dweekly/skills`, then `/plugin install ballot-coach@dweekly-skills`.
@@ -25,6 +26,7 @@ Or copy any `skills/<name>/` directory into `~/.claude/skills/`.
 - [ios-simulator-qa](skills/ios-simulator-qa/SKILL.md): building, driving and visually verifying iPhone and iPad apps on the Simulator, including simulators shared by several agents on one Mac, per-simulator audio routing and iPhone Duo poses, and turning a verified walkthrough into an unattended XCTest or Maestro flow. (updated 2026-10-29; update when: a new Xcode release changes simulator behavior or its embedded skills)
 - [app-store-media](skills/app-store-media/SKILL.md): App Store screenshots from simulator captures, end to end: which sizes are required, clean capture, scripted framing with brand captions, caption layout and ordering with the evidence behind them, a contact sheet for approval, machine validation, upload and measuring the result; plus an App Preview video cut from UI-test takes by a JSON storyboard, with checks against Apple's spec. (updated 2026-10-28; update when: Apple's screenshot or preview specification changes, or a new device class appears)
 - [ios-dev-workflow](skills/ios-dev-workflow/SKILL.md): running iOS and iPadOS work with an owner and several agents without rework: reading Apple's primary sources first (Xcode's bundled skills and guides, SDK headers and Swift interfaces, official docs) and learning APIs by building small instrumented probe apps and looking at the result, setting the bar for what gets fixed before dispatching, settling visual decisions in one sitting with real screenshots and a tradeoff table, labelling evidence sources, small agent jobs, landing order and standing landing authority, shared builds and a simulator queue, CI simulators that hide state-dependent tests, release-candidate gates, device prerequisites, and platform behaviors measured on iOS 26. (updated 2026-11-03; update when: another iOS sprint shows a rule here is wrong or missing, or a new OS changes a measured behavior)
+- [android-device-qa](skills/android-device-qa/SKILL.md): building, driving and visually verifying Android apps on emulators and physical phones: a headless emulator fleet without the host microphone, wireless adb pairing on macOS, what hierarchy dumps can show, a label and target-size checker, TalkBack's limits under adb, a screen matrix across devices, font scales and orientations, Maestro pitfalls, and measuring launch time, microphone use and flicker. (updated 2026-11-04; update when: an emulator, platform-tools or Maestro release changes a behavior it describes)
 
 ## Other docs
 

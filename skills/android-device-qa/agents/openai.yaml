@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Device QA"
+  short_description: "Repeatable Android emulator and phone testing"
+  default_prompt: "Use $android-device-qa to test this Android app across devices, font sizes and orientations, and turn the verified flow into an unattended Maestro run."

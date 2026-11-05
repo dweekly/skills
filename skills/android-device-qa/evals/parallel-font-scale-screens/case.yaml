@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: parallel-font-scale-screens
+expected_outcome: |
+  A bash script that boots three instances of one AVD safely in parallel (explicit distinct ports,
+  read-only, headless, no host audio), sets font scale and orientation per shot in a way that survives
+  app relaunches, verifies each screenshot's shape, avoids adb-eats-stdin loop bugs, and restores
+  device settings and stops only the emulators it started.

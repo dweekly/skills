@@ -1,0 +1,4 @@
+# Eval case files (prompt.md, graders/*.md) are machine-read test inputs for `claude plugin eval`,
+# indexed by their skill's ROADMAP line rather than one README entry each.
+skills/*/evals/*/prompt.md
+skills/*/evals/*/graders/*.md
