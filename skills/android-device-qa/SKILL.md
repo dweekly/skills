@@ -158,8 +158,11 @@ every screenshot.
 adb shell settings put system font_scale 2.0      # 1.0, 1.3, 2.0 (2.0 is the Android 14+ maximum)
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 1     # 0 portrait, 1 landscape on a phone
-adb shell wm density 320                          # emulate another density; `wm density reset`
-adb shell wm size 1080x2400                       # emulate another size; `wm size reset`
+adb shell wm density                              # read first: "Override density" means one is set
+adb shell wm density 320                          # emulate another density
+adb shell wm size                                 # read first, likewise
+adb shell wm size 1080x2400                       # emulate another size
+# afterwards put back what you read: the earlier override, or `wm density reset` / `wm size reset`
 ```
 
 - **Rotation resets behind you.** Force-stopping the app brings the launcher forward, and the
